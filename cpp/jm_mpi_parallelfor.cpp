@@ -1,11 +1,5 @@
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// miniWeather
-// Author: Matt Norman <normanmr@ornl.gov>  , Oak Ridge National Laboratory
-// This code simulates dry, stratified, compressible, non-hydrostatic fluid flows
-// For documentation, please see the attached documentation in the "documentation" folder
-//
-//////////////////////////////////////////////////////////////////////////////////////////
+#define LCBLK   32
+#define NCBLK_G 100
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,12 +10,18 @@
 #include <chrono>
 
 // We're going to define all arrays on the host because this doesn't use parallel_for
+typedef yakl::Array<int   ,1,yakl::memDevice> int1d;
+typedef yakl::Array<int   ,2,yakl::memDevice> int2d;
+typedef yakl::Array<int   ,3,yakl::memDevice> int3d;
+typedef yakl::Array<int   ,4,yakl::memDevice> int4d;
 typedef yakl::Array<real  ,1,yakl::memDevice> real1d;
 typedef yakl::Array<real  ,2,yakl::memDevice> real2d;
 typedef yakl::Array<real  ,3,yakl::memDevice> real3d;
+typedef yakl::Array<real  ,4,yakl::memDevice> real4d;
 typedef yakl::Array<double,1,yakl::memDevice> doub1d;
 typedef yakl::Array<double,2,yakl::memDevice> doub2d;
 typedef yakl::Array<double,3,yakl::memDevice> doub3d;
+typedef yakl::Array<double,4,yakl::memDevice> doub4d;
 
 typedef yakl::Array<real   const,1,yakl::memDevice> realConst1d;
 typedef yakl::Array<real   const,2,yakl::memDevice> realConst2d;
@@ -31,9 +31,14 @@ typedef yakl::Array<double const,2,yakl::memDevice> doubConst2d;
 typedef yakl::Array<double const,3,yakl::memDevice> doubConst3d;
 
 // Some arrays still need to be on the host, so we will explicitly create Host Array typedefs
+typedef yakl::Array<int   ,1,yakl::memHost> int1dHost;
+typedef yakl::Array<int   ,2,yakl::memHost> int2dHost;
+typedef yakl::Array<int   ,3,yakl::memHost> int3dHost;
+typedef yakl::Array<int   ,4,yakl::memHost> int4dHost;
 typedef yakl::Array<real  ,1,yakl::memHost> real1dHost;
 typedef yakl::Array<real  ,2,yakl::memHost> real2dHost;
 typedef yakl::Array<real  ,3,yakl::memHost> real3dHost;
+typedef yakl::Array<real  ,4,yakl::memHost> real4dHost;
 typedef yakl::Array<double,1,yakl::memHost> doub1dHost;
 typedef yakl::Array<double,2,yakl::memHost> doub2dHost;
 typedef yakl::Array<double,3,yakl::memHost> doub3dHost;
@@ -42,16 +47,14 @@ typedef yakl::Array<double,3,yakl::memHost> doub3dHost;
 // Variables that are initialized but remain static over the coure of the simulation
 ///////////////////////////////////////////////////////////////////////////////////////
 struct Fixed_data {
-  int nx, nz;                 //Number of local grid cells in the x- and z- dimensions for this MPI task
+  int lcblk, ncblk, ndof, mrows;  
   int i_beg, k_beg;           //beginning index in the x- and z-directions for this MPI task
   int nranks, myrank;         //Number of MPI ranks and my rank id
   int left_rank, right_rank;  //MPI Rank IDs that exist to my left and right in the global domain
-  int mainproc;             //Am I the main process (rank == 0)?
-  realConst1d hy_dens_cell;        //hydrostatic density (vert cell avgs).   Dimensions: (1-hs:nz+hs)
-  realConst1d hy_dens_theta_cell;  //hydrostatic rho*t (vert cell avgs).     Dimensions: (1-hs:nz+hs)
-  realConst1d hy_dens_int;         //hydrostatic density (vert cell interf). Dimensions: (1:nz+1)
-  realConst1d hy_dens_theta_int;   //hydrostatic rho*t (vert cell interf).   Dimensions: (1:nz+1)
-  realConst1d hy_pressure_int;     //hydrostatic press (vert cell interf).   Dimensions: (1:nz+1)
+  int mainproc;               //Am I the main process (rank == 0)?
+  realConst2d precond_build;       //   Dimensions: (lcblk, ncblk)
+  realConst2d ju;                  //   Dimensions: (lcblk, ncblk)
+  realConst2d jp;                  //   Dimensions: (lcblk, ncblk)
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -59,7 +62,8 @@ struct Fixed_data {
 ///////////////////////////////////////////////////////////////////////////////////////
 
 //Declaring the functions defined after "main"
-void init                 ( real3d &state , real &dt , Fixed_data &fixed_data );
+void init                 ( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data );
+#if 0
 void finalize             ( );
 YAKL_INLINE void injection            ( real x , real z , real &r , real &u , real &w , real &t , real &hr , real &ht );
 YAKL_INLINE void density_current      ( real x , real z , real &r , real &u , real &w , real &t , real &hr , real &ht );
@@ -78,6 +82,7 @@ void compute_tendencies_z ( realConst3d state , real3d const &tend , real dt , F
 void set_halo_values_x    ( real3d const &state  , Fixed_data const &fixed_data );
 void set_halo_values_z    ( real3d const &state  , Fixed_data const &fixed_data );
 void reductions           ( realConst3d state , double &mass , double &te , Fixed_data const &fixed_data );
+#endif
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -88,12 +93,16 @@ int main(int argc, char **argv) {
   yakl::init();
   {
     Fixed_data fixed_data;
-    real3d state;
+    int3d  ipiv;   // lcblk, ndof, ncblk
+    real4d afac;   // lcblk, mrows, ndof, ncblk
+    real3d bblk;   // lcblk, ndof, ncblk
+    real2d tempv;  // lcblk, ncblk
     real dt;                    //Model time step (seconds)
 
     // Init allocates the state and hydrostatic arrays hy_*
-    init( state , dt , fixed_data );
+    init( ipiv, afac, bblk, dt, fixed_data );
 
+#if 0
     auto &mainproc = fixed_data.mainproc;
 
     //Initial reductions for mass, kinetic energy, and total energy
@@ -150,12 +159,62 @@ int main(int argc, char **argv) {
     }
 
     finalize();
+#endif
   }
   yakl::finalize();
   MPI_Finalize();
 }
 
+void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data ) {
+  auto &nranks           = fixed_data.nranks          ;
+  auto &ndof             = fixed_data.ndof            ;
+  auto &mrows            = fixed_data.mrows           ;
+  auto &lcblk            = fixed_data.lcblk           ;
+  auto &ncblk            = fixed_data.ncblk           ;
+  auto &myrank           = fixed_data.myrank          ;
+  auto &mainproc         = fixed_data.mainproc        ;
+  auto &i_beg            = fixed_data.i_beg           ;
+  int  ierr;
+  int  memcheck ;
 
+  ierr = MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+  ierr = MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+
+  ndof  = 145 ;
+  mrows = 70 ;
+  lcblk = LCBLK ;
+  ncblk = NCBLK_G / nranks ;
+
+fprintf(stderr, "ndof %d \n"  , ndof );
+fprintf(stderr, "mrows %d \n" , mrows );
+fprintf(stderr, "lcblk %d \n" , lcblk );
+fprintf(stderr, "ncblk %d \n" , ncblk );
+  memcheck =  0 ;
+  memcheck += sizeof(int) *lcblk*ndof*ncblk       ; //ipiv
+  memcheck += sizeof(real)*lcblk*ndof*ncblk       ; //bblk
+  memcheck += sizeof(real)*lcblk*mrows*ndof*ncblk ; //afac
+  memcheck += sizeof(real)*lcblk*ncblk            ; //ju
+  memcheck += sizeof(real)*lcblk*ncblk            ; //jp
+
+#ifdef __CUDA_ARCH__
+  if ( memcheck > 1073741824 ) {
+    fprintf(stderr, "memcheck > 1GB %d \n" , memcheck ) ;
+    exit(-1) ;
+  }
+#else
+    fprintf(stderr, "memcheck  %d \n" , memcheck ) ;
+#endif
+
+  ipiv          = int3d( "ipiv"  , lcblk, ndof, ncblk);
+  afac          = real4d( "afac" , mrows, lcblk, ndof, ncblk);
+  bblk          = real3d( "bblk" , lcblk, ndof, ncblk);
+  fixed_data.ju = real2d( "ju"   , lcblk, ncblk) ;
+  fixed_data.jp = real2d( "jp"   , lcblk, ncblk) ;
+
+}
+
+
+#if 0
 //Performs a single dimensionally split time step using a simple low-storate three-stage Runge-Kutta time integrator
 //The dimensional splitting is a second-order-accurate alternating Strang splitting in which the
 //order of directions is alternated each time step.
@@ -472,8 +531,8 @@ void set_halo_values_z( real3d const &state , Fixed_data const &fixed_data ) {
   auto &nz                 = fixed_data.nz                ;
   auto &hy_dens_cell       = fixed_data.hy_dens_cell      ;
   
-  // for (ll=0; ll<NUM_VARS; ll++) {
-  //   for (i=0; i<nx+2*hs; i++) {
+  // for (ll=0; ll<NUM_VARS; ll++)
+  //   for (i=0; i<nx+2*hs; i++)
   parallel_for( SimpleBounds<2>(NUM_VARS,nx+2*hs) , YAKL_LAMBDA (int ll, int i) {
     if (ll == ID_WMOM) {
       state(ll,0      ,i) = 0.;
@@ -493,145 +552,10 @@ void set_halo_values_z( real3d const &state , Fixed_data const &fixed_data ) {
     }
   });
 }
+#endif
 
 
-void init( real3d &state , real &dt , Fixed_data &fixed_data ) {
-  auto &nx                 = fixed_data.nx                ;
-  auto &nz                 = fixed_data.nz                ;
-  auto &i_beg              = fixed_data.i_beg             ;
-  auto &k_beg              = fixed_data.k_beg             ;
-  auto &left_rank          = fixed_data.left_rank         ;
-  auto &right_rank         = fixed_data.right_rank        ;
-  auto &nranks             = fixed_data.nranks            ;
-  auto &myrank             = fixed_data.myrank            ;
-  auto &mainproc         = fixed_data.mainproc        ;
-  int  ierr;
-
-  ierr = MPI_Comm_size(MPI_COMM_WORLD,&nranks);
-  ierr = MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-  real nper = ( (double) nx_glob ) / nranks;
-  i_beg = round( nper* (myrank)    );
-  int i_end = round( nper*((myrank)+1) )-1;
-  nx = i_end - i_beg + 1;
-  left_rank  = myrank - 1;
-  if (left_rank == -1) left_rank = nranks-1;
-  right_rank = myrank + 1;
-  if (right_rank == nranks) right_rank = 0;
-
-  //Vertical direction isn't MPI-ized, so the rank's local values = the global values
-  k_beg = 0;
-  nz = nz_glob;
-  mainproc = (myrank == 0);
-
-  //Allocate the model data
-  state              = real3d( "state" , NUM_VARS,nz+2*hs,nx+2*hs);
-
-  //Define the maximum stable time step based on an assumed maximum wind speed
-  dt = min(dx,dz) / max_speed * cfl;
-
-  //If I'm the main process in MPI, display some grid information
-  if (mainproc) {
-    printf( "nx_glob, nz_glob: %d %d\n", nx_glob, nz_glob);
-    printf( "dx,dz: %lf %lf\n",dx,dz);
-    printf( "dt: %lf\n",dt);
-  }
-  //Want to make sure this info is displayed before further output
-  ierr = MPI_Barrier(MPI_COMM_WORLD);
-
-  // Define quadrature weights and points
-  const int nqpoints = 3;
-  SArray<real,1,nqpoints> qpoints;
-  SArray<real,1,nqpoints> qweights;
-
-  qpoints(0) = 0.112701665379258311482073460022;
-  qpoints(1) = 0.500000000000000000000000000000;
-  qpoints(2) = 0.887298334620741688517926539980;
-
-  qweights(0) = 0.277777777777777777777777777779;
-  qweights(1) = 0.444444444444444444444444444444;
-  qweights(2) = 0.277777777777777777777777777779;
-
-  //////////////////////////////////////////////////////////////////////////
-  // Initialize the cell-averaged fluid state via Gauss-Legendre quadrature
-  //////////////////////////////////////////////////////////////////////////
-  // for (k=0; k<nz+2*hs; k++) {
-  //   for (i=0; i<nx+2*hs; i++) {
-  parallel_for( SimpleBounds<2>(nz+2*hs,nx+2*hs) , YAKL_LAMBDA (int k, int i) {
-    //Initialize the state to zero
-    for (int ll=0; ll<NUM_VARS; ll++) {
-      state(ll,k,i) = 0.;
-    }
-    //Use Gauss-Legendre quadrature to initialize a hydrostatic balance + temperature perturbation
-    for (int kk=0; kk<nqpoints; kk++) {
-      for (int ii=0; ii<nqpoints; ii++) {
-        //Compute the x,z location within the global domain based on cell and quadrature index
-        real x = (i_beg + i-hs+0.5)*dx + (qpoints(ii)-0.5)*dx;
-        real z = (k_beg + k-hs+0.5)*dz + (qpoints(kk)-0.5)*dz;
-        real r, u, w, t, hr, ht;
-
-        //Set the fluid state based on the user's specification
-        if (data_spec_int == DATA_SPEC_COLLISION      ) { collision      (x,z,r,u,w,t,hr,ht); }
-        if (data_spec_int == DATA_SPEC_THERMAL        ) { thermal        (x,z,r,u,w,t,hr,ht); }
-        if (data_spec_int == DATA_SPEC_GRAVITY_WAVES  ) { gravity_waves  (x,z,r,u,w,t,hr,ht); }
-        if (data_spec_int == DATA_SPEC_DENSITY_CURRENT) { density_current(x,z,r,u,w,t,hr,ht); }
-        if (data_spec_int == DATA_SPEC_INJECTION      ) { injection      (x,z,r,u,w,t,hr,ht); }
-
-        //Store into the fluid state array
-        state(ID_DENS,k,i) += r                         * qweights(ii)*qweights(kk);
-        state(ID_UMOM,k,i) += (r+hr)*u                  * qweights(ii)*qweights(kk);
-        state(ID_WMOM,k,i) += (r+hr)*w                  * qweights(ii)*qweights(kk);
-        state(ID_RHOT,k,i) += ( (r+hr)*(t+ht) - hr*ht ) * qweights(ii)*qweights(kk);
-      }
-    }
-  });
-
-  real1d hy_dens_cell      ("hy_dens_cell      ",nz+2*hs);
-  real1d hy_dens_theta_cell("hy_dens_theta_cell",nz+2*hs);
-  real1d hy_dens_int       ("hy_dens_int       ",nz+1);
-  real1d hy_dens_theta_int ("hy_dens_theta_int ",nz+1);
-  real1d hy_pressure_int   ("hy_pressure_int   ",nz+1);
-
-  //Compute the hydrostatic background state over vertical cell averages
-  // for (int k=0; k<nz+2*hs; k++) {
-  parallel_for( nz+2*hs , YAKL_LAMBDA (int k) {
-    hy_dens_cell      (k) = 0.;
-    hy_dens_theta_cell(k) = 0.;
-    for (int kk=0; kk<nqpoints; kk++) {
-      real z = (k_beg + k-hs+0.5)*dz;
-      real r, u, w, t, hr, ht;
-      //Set the fluid state based on the user's specification
-      if (data_spec_int == DATA_SPEC_COLLISION      ) { collision      (0.,z,r,u,w,t,hr,ht); }
-      if (data_spec_int == DATA_SPEC_THERMAL        ) { thermal        (0.,z,r,u,w,t,hr,ht); }
-      if (data_spec_int == DATA_SPEC_GRAVITY_WAVES  ) { gravity_waves  (0.,z,r,u,w,t,hr,ht); }
-      if (data_spec_int == DATA_SPEC_DENSITY_CURRENT) { density_current(0.,z,r,u,w,t,hr,ht); }
-      if (data_spec_int == DATA_SPEC_INJECTION      ) { injection      (0.,z,r,u,w,t,hr,ht); }
-      hy_dens_cell      (k) = hy_dens_cell      (k) + hr    * qweights(kk);
-      hy_dens_theta_cell(k) = hy_dens_theta_cell(k) + hr*ht * qweights(kk);
-    }
-  });
-  //Compute the hydrostatic background state at vertical cell interfaces
-  // for (int k=0; k<nz+1; k++) {
-  parallel_for( nz+1 , YAKL_LAMBDA (int k) {
-    real z = (k_beg + k)*dz;
-    real r, u, w, t, hr, ht;
-    if (data_spec_int == DATA_SPEC_COLLISION      ) { collision      (0.,z,r,u,w,t,hr,ht); }
-    if (data_spec_int == DATA_SPEC_THERMAL        ) { thermal        (0.,z,r,u,w,t,hr,ht); }
-    if (data_spec_int == DATA_SPEC_GRAVITY_WAVES  ) { gravity_waves  (0.,z,r,u,w,t,hr,ht); }
-    if (data_spec_int == DATA_SPEC_DENSITY_CURRENT) { density_current(0.,z,r,u,w,t,hr,ht); }
-    if (data_spec_int == DATA_SPEC_INJECTION      ) { injection      (0.,z,r,u,w,t,hr,ht); }
-    hy_dens_int      (k) = hr;
-    hy_dens_theta_int(k) = hr*ht;
-    hy_pressure_int  (k) = C0*pow((hr*ht),gamm);
-  });
-
-  fixed_data.hy_dens_cell       = realConst1d(hy_dens_cell      );
-  fixed_data.hy_dens_theta_cell = realConst1d(hy_dens_theta_cell);
-  fixed_data.hy_dens_int        = realConst1d(hy_dens_int       );
-  fixed_data.hy_dens_theta_int  = realConst1d(hy_dens_theta_int );
-  fixed_data.hy_pressure_int    = realConst1d(hy_pressure_int   );
-}
-
-
+#if 0
 //This test case is initially balanced but injects fast, cold air from the left boundary near the model top
 //x and z are input coordinates at which to sample
 //r,u,w,t are output density, u-wind, w-wind, and potential temperature at that location
@@ -797,8 +721,8 @@ void output( realConst3d state , real etime , int &num_out , Fixed_data const &f
   }
 
   //Store perturbed values in the temp arrays for output
-  // for (k=0; k<nz; k++) {
-  //   for (i=0; i<nx; i++) {
+  // for (k=0; k<nz; k++)
+  //   for (i=0; i<nx; i++)
   parallel_for( SimpleBounds<2>(nz,nx) , YAKL_LAMBDA (int k, int i) {
     dens (k,i) = state(ID_DENS,hs+k,hs+i);
     uwnd (k,i) = state(ID_UMOM,hs+k,hs+i) / ( hy_dens_cell(hs+k) + state(ID_DENS,hs+k,hs+i) );
@@ -860,8 +784,8 @@ void reductions( realConst3d state, double &mass , double &te , Fixed_data const
   doub2d mass2d("mass2d",nz,nx);
   doub2d te2d  ("te2d  ",nz,nx);
 
-  // for (k=0; k<nz; k++) {
-  //   for (i=0; i<nx; i++) {
+  // for (k=0; k<nz; k++)
+  //   for (i=0; i<nx; i++)
   parallel_for( SimpleBounds<2>(nz,nx) , YAKL_LAMBDA (int k, int i) {
     double r  =   state(ID_DENS,hs+k,hs+i) + hy_dens_cell(hs+k);             // Density
     double u  =   state(ID_UMOM,hs+k,hs+i) / r;                              // U-wind
@@ -885,4 +809,5 @@ void reductions( realConst3d state, double &mass , double &te , Fixed_data const
   te   = glob[1];
 }
 
+#endif
 

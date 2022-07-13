@@ -19,9 +19,11 @@
 typedef yakl::Array<real  ,1,yakl::memDevice> real1d;
 typedef yakl::Array<real  ,2,yakl::memDevice> real2d;
 typedef yakl::Array<real  ,3,yakl::memDevice> real3d;
+typedef yakl::Array<real  ,4,yakl::memDevice> real4d;
 typedef yakl::Array<double,1,yakl::memDevice> doub1d;
 typedef yakl::Array<double,2,yakl::memDevice> doub2d;
 typedef yakl::Array<double,3,yakl::memDevice> doub3d;
+typedef yakl::Array<double,4,yakl::memDevice> doub4d;
 
 typedef yakl::Array<real   const,1,yakl::memDevice> realConst1d;
 typedef yakl::Array<real   const,2,yakl::memDevice> realConst2d;
@@ -34,9 +36,11 @@ typedef yakl::Array<double const,3,yakl::memDevice> doubConst3d;
 typedef yakl::Array<real  ,1,yakl::memHost> real1dHost;
 typedef yakl::Array<real  ,2,yakl::memHost> real2dHost;
 typedef yakl::Array<real  ,3,yakl::memHost> real3dHost;
+typedef yakl::Array<real  ,4,yakl::memHost> real4dHost;
 typedef yakl::Array<double,1,yakl::memHost> doub1dHost;
 typedef yakl::Array<double,2,yakl::memHost> doub2dHost;
 typedef yakl::Array<double,3,yakl::memHost> doub3dHost;
+typedef yakl::Array<double,4,yakl::memHost> doub4dHost;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Variables that are initialized but remain static over the coure of the simulation
@@ -620,8 +624,9 @@ void init( real3d &state , real &dt , Fixed_data &fixed_data ) {
     }
   });
   //Compute the hydrostatic background state at vertical cell interfaces
-  // for (int k=0; k<nz+1; k++) {
-  parallel_for( nz+1 , YAKL_LAMBDA (int k) {
+  // for (int k=0; k<nz+1; k++)
+  parallel_for( nz+1 , YAKL_LAMBDA (int k)
+  {
     real z = (k_beg + k)*dz;
     real r, u, w, t, hr, ht;
     if (data_spec_int == DATA_SPEC_COLLISION      ) { collision      (0.,z,r,u,w,t,hr,ht); }

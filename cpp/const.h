@@ -29,8 +29,8 @@ constexpr real zlen      = 1.e4;    //Length of the domain in the z-direction (m
 constexpr real hv_beta   = 0.05;    //How strong to diffuse the solution: hv_beta \in [0:1]
 constexpr real cfl       = 1.50;    //"Courant, Friedrichs, Lewy" number (for numerical stability)
 constexpr real max_speed = 450;     //Assumed maximum wave speed during the simulation (speed of sound + speed of wind) (meter / sec)
-constexpr int hs        = 2;        //"Halo" size: number of cells beyond the MPI tasks's domain needed for a full "stencil" of information for reconstruction
-constexpr int sten_size = 4;        //Size of the stencil used for interpolation
+constexpr int hs        = 0;        //"Halo" size: number of cells beyond the MPI tasks's domain needed for a full "stencil" of information for reconstruction
+constexpr int sten_size = 0;        //Size of the stencil used for interpolation
 
 //Parameters for indexing and flags
 constexpr int NUM_VARS = 4;           //Number of fluid state variables
