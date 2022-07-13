@@ -185,24 +185,22 @@ void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed
   lcblk = LCBLK ;
   ncblk = NCBLK_G / nranks ;
 
-fprintf(stderr, "ndof %d \n"  , ndof );
-fprintf(stderr, "mrows %d \n" , mrows );
-fprintf(stderr, "lcblk %d \n" , lcblk );
-fprintf(stderr, "ncblk %d \n" , ncblk );
+  fprintf(stderr, "ndof %d \n"  , ndof );
+  fprintf(stderr, "mrows %d \n" , mrows );
+  fprintf(stderr, "lcblk %d \n" , lcblk );
+  fprintf(stderr, "ncblk %d \n" , ncblk );
   memcheck =  0 ;
   memcheck += sizeof(int) *lcblk*ndof*ncblk       ; //ipiv
   memcheck += sizeof(real)*lcblk*ndof*ncblk       ; //bblk
   memcheck += sizeof(real)*lcblk*mrows*ndof*ncblk ; //afac
   memcheck += sizeof(real)*lcblk*ncblk            ; //ju
   memcheck += sizeof(real)*lcblk*ncblk            ; //jp
-
-#ifdef __CUDA_ARCH__
+  fprintf(stderr, "memcheck  %d \n" , memcheck ) ;
+#ifdef YAKL_ARCH_CUDA
   if ( memcheck > 1073741824 ) {
     fprintf(stderr, "memcheck > 1GB %d \n" , memcheck ) ;
     exit(-1) ;
   }
-#else
-    fprintf(stderr, "memcheck  %d \n" , memcheck ) ;
 #endif
 
   ipiv          = int3d( "ipiv"  , lcblk, ndof, ncblk);
