@@ -25,3 +25,7 @@ cmake -DCMAKE_CXX_COMPILER=mpiicpc                  \
       -DCMAKE_EXE_LINKER_FLAGS="-L/opt/nvidia/hpc_sdk/Linux_x86_64/2021/cuda/lib64 -L/opt/nvidia/hpc_sdk/Linux_x86_64/21.1/math_libs/11.2/targets/x86_64-linux/lib" \
       ..
 
+# a little helper surgery to link with Fortran compiler instead of c++ 
+# no idea how to get the wonderful wizard of cmake to do this
+sed --in-place -e 's/mpiicpc/mpiifort/' -e 's/$/-nofor-main -cxxlib/' CMakeFiles/jmparallelfor.dir/link.txt
+
