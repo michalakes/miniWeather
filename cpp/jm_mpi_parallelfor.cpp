@@ -1,4 +1,5 @@
 #define LCBLK   32
+#define CVEC    LCBLK
 #define NCBLK_G 100
 
 #include <stdlib.h>
@@ -48,6 +49,7 @@ typedef yakl::Array<double,3,yakl::memHost> doub3dHost;
 ///////////////////////////////////////////////////////////////////////////////////////
 struct Fixed_data {
   int lcblk, ncblk, ndof, mrows;  
+  int kl, ku ;
   int i_beg, k_beg;           //beginning index in the x- and z-directions for this MPI task
   int nranks, myrank;         //Number of MPI ranks and my rank id
   int left_rank, right_rank;  //MPI Rank IDs that exist to my left and right in the global domain
@@ -60,9 +62,6 @@ struct Fixed_data {
 ///////////////////////////////////////////////////////////////////////////////////////
 // Variables that are dynamics over the course of the simulation
 ///////////////////////////////////////////////////////////////////////////////////////
-
-//Declaring the functions defined after "main"
-void init                 ( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data );
 #if 0
 void finalize             ( );
 YAKL_INLINE void injection            ( real x , real z , real &r , real &u , real &w , real &t , real &hr , real &ht );
@@ -84,6 +83,15 @@ void set_halo_values_z    ( real3d const &state  , Fixed_data const &fixed_data 
 void reductions           ( realConst3d state , double &mass , double &te , Fixed_data const &fixed_data );
 #endif
 
+//Declaring the functions defined after "main"
+void init                 ( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data );
+YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
+                          real4d const &ab,
+                          int ldab,
+                          int3d const &ipiv,
+                          Fixed_data const &fixed_data,
+                          yakl::InnerHandler & inner_handler ) ;
+
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // THE MAIN PROGRAM STARTS HERE
@@ -102,68 +110,42 @@ int main(int argc, char **argv) {
     // Init allocates the state and hydrostatic arrays hy_*
     init( ipiv, afac, bblk, dt, fixed_data );
 
-#if 0
-    auto &mainproc = fixed_data.mainproc;
+    parallel_outer( "vdgbtf2", 
+                          Bounds<1>( fixed_data.ncblk ) , 
+                          YAKL_LAMBDA ( int ib, yakl::InnerHandler inner_handler )
+    {
+      vdgbtf2( ib, 
+               fixed_data.ndof,
+               fixed_data.kl, fixed_data.ku, 
+               afac, 
+               fixed_data.mrows,
+               ipiv,
+               fixed_data,
+               inner_handler ) ;
+    }, yakl::LaunchConfig<LCBLK>() ) ;
 
-    //Initial reductions for mass, kinetic energy, and total energy
-    double mass0, te0;
-    reductions(state,mass0,te0,fixed_data);
-
-    int  num_out = 0;          //The number of outputs performed so far
-    real output_counter = 0;   //Helps determine when it's time to do output
-    real etime = 0;
-
-    //Output the initial state
-    if (output_freq >= 0) {
-      output(state,etime,num_out,fixed_data);
-    }
-
-    int direction_switch = 1;  // Tells dimensionally split which order to take x,z solves
-
-    ////////////////////////////////////////////////////
-    // MAIN TIME STEP LOOP
-    ////////////////////////////////////////////////////
-    yakl::fence();
-    auto t1 = std::chrono::steady_clock::now();
-    while (etime < sim_time) {
-      //If the time step leads to exceeding the simulation time, shorten it for the last step
-      if (etime + dt > sim_time) { dt = sim_time - etime; }
-      //Perform a single time step
-      perform_timestep(state,dt,direction_switch,fixed_data);
-      //Inform the user
-      #ifndef NO_INFORM
-        if (mainproc) { printf( "Elapsed Time: %lf / %lf\n", etime , sim_time ); }
-      #endif
-      //Update the elapsed time and output counter
-      etime = etime + dt;
-      output_counter = output_counter + dt;
-      //If it's time for output, reset the counter, and do output
-      if (output_freq >= 0 && output_counter >= output_freq) {
-        output_counter = output_counter - output_freq;
-        output(state,etime,num_out,fixed_data);
-      }
-    }
-    yakl::fence();
-    auto t2 = std::chrono::steady_clock::now();
-    if (mainproc) {
-      std::cout << "CPU Time: " << std::chrono::duration<double>(t2-t1).count() << " sec\n";
-    }
-
-    //Final reductions for mass, kinetic energy, and total energy
-    double mass, te;
-    reductions(state,mass,te,fixed_data);
-
-    if (mainproc) {
-      printf( "d_mass: %le\n" , (mass - mass0)/mass0 );
-      printf( "d_te:   %le\n" , (te   - te0  )/te0   );
-    }
-
-    finalize();
-#endif
   }
   yakl::finalize();
   MPI_Finalize();
 }
+YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
+                          real4d const &ab,
+                          int ldab,
+                          int3d const &ipiv,
+                          Fixed_data const &fixed_data,
+                          yakl::InnerHandler & inner_handler )
+{
+  int i, j, ie ;
+  int kv = ku + kl ;
+  if ( n == 0 ) return ; // quick return if possible
+  parallel_inner( Bounds<3>({ku+2,(ku<n)?kv:n},{kv-j+2,kl},LCBLK),
+                  YAKL_LAMBDA(int j, int i, int ie )
+    {
+      ab(ie,i,j,ib) = 0. ;
+    }, inner_handler
+  ) ;
+}
+
 
 void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data ) {
   auto &nranks           = fixed_data.nranks          ;
