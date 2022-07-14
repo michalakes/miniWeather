@@ -44,6 +44,10 @@ endif()
 ############################################################
 SET(CMAKE_CXX_FLAGS "${CXXFLAGS}")
 
+###
+SET(CMAKE_Fortran_FLAGS "${FFLAGS}")
+SET(CMAKE_Fortran_COMPILE_OBJECT "<CMAKE_Fortran_COMPILER> -o <OBJECT> <DEFINES> <FLAGS> -c <SOURCE>")
+
 
 ############################################################
 ## Add YAKL 
@@ -119,10 +123,10 @@ add_test(NAME YAKL_SIMD_TEST COMMAND ./check_output.sh ./parallelfor_test 1e-9 4
 ############################################################
 ## JM version
 ############################################################
-add_executable(jmparallelfor jm_mpi_parallelfor.cpp)
+add_executable(jmparallelfor jm_mpi_parallelfor.cpp reader.F90)
 set_target_properties(jmparallelfor PROPERTIES COMPILE_FLAGS "${EXE_DEFS}")
 
-add_executable(jmparallelfor_test jm_mpi_parallelfor.cpp)
+add_executable(jmparallelfor_test jm_mpi_parallelfor.cpp reader.F90)
 set_target_properties(jmparallelfor_test PROPERTIES COMPILE_FLAGS "${TEST_DEFS}")
 
 target_link_libraries(jmparallelfor      "${LDFLAGS}")
