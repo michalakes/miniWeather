@@ -89,6 +89,8 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
                           real4d const &ab,
                           int ldab,
                           int3d const &ipiv,
+                          int2d const &ju,
+                          int2d const &jp,
                           Fixed_data const &fixed_data,
                           yakl::InnerHandler & inner_handler ) ;
 
@@ -110,6 +112,9 @@ int main(int argc, char **argv) {
     // Init allocates the state and hydrostatic arrays hy_*
     init( ipiv, afac, bblk, dt, fixed_data );
 
+    int2d  ju = int2d("ju",fixed_data.ncblk,LCBLK) ;
+    int2d  jp = int2d("jp",fixed_data.ncblk,LCBLK) ;
+
     parallel_outer( "vdgbtf2", 
                           Bounds<1>( fixed_data.ncblk ) , 
                           YAKL_LAMBDA ( int ib, yakl::InnerHandler inner_handler )
@@ -120,6 +125,7 @@ int main(int argc, char **argv) {
                afac, 
                fixed_data.mrows,
                ipiv,
+               ju, jp,
                fixed_data,
                inner_handler ) ;
     }, yakl::LaunchConfig<LCBLK>() ) ;
@@ -133,19 +139,84 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
                           real4d const &ab,
                           int ldab,
                           int3d const &ipiv,
+                          int2d const &ju,
+                          int2d const &jp,
                           Fixed_data const &fixed_data,
                           yakl::InnerHandler & inner_handler )
 {
   int kv = ku + kl ;
+  int km ;
   if ( n == 0 ) return ; // quick return if possible
-  for ( int j = ku+2 ; j <= (kv<n)?kv:n ; j++ ) { 
-    parallel_inner( Bounds<2>({kv-j+2,kl},LCBLK),
+// Gaussian elimination with partial pivoting
+// Set fill-in elements in columns KU+2 to KV to zero.
+//        DO 20 J = KU + 2, MIN( KV, N )
+//  !$acc loop collapse(2)
+//           DO 10 I = KV - J + 2, KL
+//              do ie = es, ee
+//  !               if ( .not. precon_build(ie) ) cycle
+//                 AB( M2DEX(ie, I, J) ) = ZERO
+//              end do
+//     10    CONTINUE
+//     20 CONTINUE
+  for ( int j = (ku+2)-1 ; j <= ((kv<n)?kv:n)-1 ; j++ ) { 
+    parallel_inner( Bounds<2>({(kv-(j+1)+2)-1,(kl)-1},LCBLK),
                     [&] (int i, int ie )
       {
         ab(ib,j,i,ie) = 0. ;
       }, inner_handler
     ) ;
   }
+// JU is the index of the last column affected by the current stage
+// of the factorization.
+//        JU = 1
+//
+  parallel_inner( Bounds<1>(LCBLK),[&](int ie) {ju(ib,ie)=1;}, inner_handler );
+//         DO 40 J = 1, N
+// !          Set fill-in elements in column J+KV to zero.
+//           IF( J+KV.LE.N ) THEN
+//              DO 30 I = 1, KL
+//                do ie = es, ee
+//                  AB( M2DEX(ie, I, J+KV) ) = ZERO
+//                end do
+//    30        CONTINUE
+//           END IF
+// !         Find pivot and test for singularity. KM is the number of
+// !         subdiagonal elements in the current column.
+//           KM = MIN( KL, N-J )
+  for ( int j=0 ; j < n ; j++ )
+  {
+    if ( j+kv < n ) {
+      parallel_inner( Bounds<2>(kl,LCBLK),[&](int i, int ie){
+        ab(ib,(j+kv)-1,i,ie) = 0. ;
+      }, inner_handler ) ;
+    }
+    km = (kl<n-j)?kl:n-j ;
+//           CALL VIDAMAX1( es, ee, KM+1, AB( M2DEX(1, KV+1, J)), JP )
+#define dx(B,A) ab(ib,j,(kv+1)-1+(B),A)
+#define absdx(A) (dx(A,ie)>0.)?dx(A,ie):-dx(A,ie)
+    parallel_inner( Bounds<1>(LCBLK),[&](int ie){
+      real dmax ;
+      int pivot ;
+      dmax=absdx(0) ;
+      for ( int ii = 1 ; ii < km+1 ; ii++ ) {
+        dmax = (absdx(ii)>dmax)?absdx(ii):dmax ;
+      }
+    }, inner_handler );
+#undef dx
+#undef absdx
+
+//           IPIV(M1DEXv(J)) = JP(M0DEXv) + J - 1
+//           do ie = es, ee
+//             JU(M0DEX(ie)) = MAX( JU(M0DEX(ie)), MIN( J+KU+JP(M0DEX(ie))-1, N ) )
+//           enddo
+    parallel_inner( Bounds<1>(LCBLK),[&] (int ie) {
+      ipiv(ib,j,ie) = jp(ib,ie)+j-1 ;
+      int j1 = ((j+ku+jp(ib,ie)-1)<n)?(j+ku+jp(ib,ie)-1):n ;
+      ju(ib,ie)=(ju(ib,ie)>j1)?ju(ib,ie):j1 ;
+    }, inner_handler );
+
+  } // j loop
+
 }
 
 extern "C"{
