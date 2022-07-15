@@ -10,39 +10,41 @@
 #include <ctime>
 #include <chrono>
 
-// We're going to define all arrays on the host because this doesn't use parallel_for
-typedef yakl::Array<int   ,1,yakl::memDevice> int1d;
-typedef yakl::Array<int   ,2,yakl::memDevice> int2d;
-typedef yakl::Array<int   ,3,yakl::memDevice> int3d;
-typedef yakl::Array<int   ,4,yakl::memDevice> int4d;
-typedef yakl::Array<real  ,1,yakl::memDevice> real1d;
-typedef yakl::Array<real  ,2,yakl::memDevice> real2d;
-typedef yakl::Array<real  ,3,yakl::memDevice> real3d;
-typedef yakl::Array<real  ,4,yakl::memDevice> real4d;
-typedef yakl::Array<double,1,yakl::memDevice> doub1d;
-typedef yakl::Array<double,2,yakl::memDevice> doub2d;
-typedef yakl::Array<double,3,yakl::memDevice> doub3d;
-typedef yakl::Array<double,4,yakl::memDevice> doub4d;
+using namespace yakl::fortran ;
 
-typedef yakl::Array<real   const,1,yakl::memDevice> realConst1d;
-typedef yakl::Array<real   const,2,yakl::memDevice> realConst2d;
-typedef yakl::Array<real   const,3,yakl::memDevice> realConst3d;
-typedef yakl::Array<double const,1,yakl::memDevice> doubConst1d;
-typedef yakl::Array<double const,2,yakl::memDevice> doubConst2d;
-typedef yakl::Array<double const,3,yakl::memDevice> doubConst3d;
+// We're going to define all arrays on the host because this doesn't use parallel_for
+typedef yakl::Array<int   ,1,yakl::memDevice,yakl::styleFortran> int1d;
+typedef yakl::Array<int   ,2,yakl::memDevice,yakl::styleFortran> int2d;
+typedef yakl::Array<int   ,3,yakl::memDevice,yakl::styleFortran> int3d;
+typedef yakl::Array<int   ,4,yakl::memDevice,yakl::styleFortran> int4d;
+typedef yakl::Array<real  ,1,yakl::memDevice,yakl::styleFortran> real1d;
+typedef yakl::Array<real  ,2,yakl::memDevice,yakl::styleFortran> real2d;
+typedef yakl::Array<real  ,3,yakl::memDevice,yakl::styleFortran> real3d;
+typedef yakl::Array<real  ,4,yakl::memDevice,yakl::styleFortran> real4d;
+typedef yakl::Array<double,1,yakl::memDevice,yakl::styleFortran> doub1d;
+typedef yakl::Array<double,2,yakl::memDevice,yakl::styleFortran> doub2d;
+typedef yakl::Array<double,3,yakl::memDevice,yakl::styleFortran> doub3d;
+typedef yakl::Array<double,4,yakl::memDevice,yakl::styleFortran> doub4d;
+
+typedef yakl::Array<real   const,1,yakl::memDevice,yakl::styleFortran> realConst1d;
+typedef yakl::Array<real   const,2,yakl::memDevice,yakl::styleFortran> realConst2d;
+typedef yakl::Array<real   const,3,yakl::memDevice,yakl::styleFortran> realConst3d;
+typedef yakl::Array<double const,1,yakl::memDevice,yakl::styleFortran> doubConst1d;
+typedef yakl::Array<double const,2,yakl::memDevice,yakl::styleFortran> doubConst2d;
+typedef yakl::Array<double const,3,yakl::memDevice,yakl::styleFortran> doubConst3d;
 
 // Some arrays still need to be on the host, so we will explicitly create Host Array typedefs
-typedef yakl::Array<int   ,1,yakl::memHost> int1dHost;
-typedef yakl::Array<int   ,2,yakl::memHost> int2dHost;
-typedef yakl::Array<int   ,3,yakl::memHost> int3dHost;
-typedef yakl::Array<int   ,4,yakl::memHost> int4dHost;
-typedef yakl::Array<real  ,1,yakl::memHost> real1dHost;
-typedef yakl::Array<real  ,2,yakl::memHost> real2dHost;
-typedef yakl::Array<real  ,3,yakl::memHost> real3dHost;
-typedef yakl::Array<real  ,4,yakl::memHost> real4dHost;
-typedef yakl::Array<double,1,yakl::memHost> doub1dHost;
-typedef yakl::Array<double,2,yakl::memHost> doub2dHost;
-typedef yakl::Array<double,3,yakl::memHost> doub3dHost;
+typedef yakl::Array<int   ,1,yakl::memHost,yakl::styleFortran> int1dHost;
+typedef yakl::Array<int   ,2,yakl::memHost,yakl::styleFortran> int2dHost;
+typedef yakl::Array<int   ,3,yakl::memHost,yakl::styleFortran> int3dHost;
+typedef yakl::Array<int   ,4,yakl::memHost,yakl::styleFortran> int4dHost;
+typedef yakl::Array<real  ,1,yakl::memHost,yakl::styleFortran> real1dHost;
+typedef yakl::Array<real  ,2,yakl::memHost,yakl::styleFortran> real2dHost;
+typedef yakl::Array<real  ,3,yakl::memHost,yakl::styleFortran> real3dHost;
+typedef yakl::Array<real  ,4,yakl::memHost,yakl::styleFortran> real4dHost;
+typedef yakl::Array<double,1,yakl::memHost,yakl::styleFortran> doub1dHost;
+typedef yakl::Array<double,2,yakl::memHost,yakl::styleFortran> doub2dHost;
+typedef yakl::Array<double,3,yakl::memHost,yakl::styleFortran> doub3dHost;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Variables that are initialized but remain static over the coure of the simulation
@@ -116,8 +118,8 @@ int main(int argc, char **argv) {
     int2d  jp = int2d("jp",fixed_data.ncblk,LCBLK) ;
 
     parallel_outer( "vdgbtf2", 
-                          Bounds<1>( fixed_data.ncblk ) , 
-                          YAKL_LAMBDA ( int ib, yakl::InnerHandler inner_handler )
+                             fixed_data.ncblk, 
+                             YAKL_LAMBDA ( int ib, yakl::InnerHandler inner_handler )
     {
       vdgbtf2( ib, 
                fixed_data.ndof,
@@ -159,10 +161,10 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
 //     10    CONTINUE
 //     20 CONTINUE
   for ( int j = (ku+2)-1 ; j <= ((kv<n)?kv:n)-1 ; j++ ) { 
-    parallel_inner( Bounds<2>({(kv-(j+1)+2)-1,(kl)-1},LCBLK),
-                    [&] (int i, int ie )
+    parallel_inner( yakl::fortran::Bounds<2>({(kv-(j+1)+2)-1,(kl)-1},LCBLK),
+                    [&] (int i, int ie )  // TODO check, are these still in C order?
       {
-        ab(ib,j,i,ie) = 0. ;
+        ab(ie,i,j,ib) = 0. ;
       }, inner_handler
     ) ;
   }
@@ -170,7 +172,7 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
 // of the factorization.
 //        JU = 1
 //
-  parallel_inner( Bounds<1>(LCBLK),[&](int ie) {ju(ib,ie)=1;}, inner_handler );
+  parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&](int ie) {ju(ie,ib)=1;}, inner_handler );
 //         DO 40 J = 1, N
 // !          Set fill-in elements in column J+KV to zero.
 //           IF( J+KV.LE.N ) THEN
@@ -183,22 +185,22 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
 // !         Find pivot and test for singularity. KM is the number of
 // !         subdiagonal elements in the current column.
 //           KM = MIN( KL, N-J )
-  for ( int j=0 ; j < n ; j++ )
+  for ( int j=1 ; j <= n ; j++ )
   {
-    if ( j+kv < n ) {
-      parallel_inner( Bounds<2>(kl,LCBLK),[&](int i, int ie){
-        ab(ib,(j+kv)-1,i,ie) = 0. ;
+    if ( j+kv <= n ) {
+      parallel_inner( yakl::fortran::Bounds<2>(kl,LCBLK),[&](int i, int ie){
+        ab(ie,i,j+kv,ib) = 0. ;
       }, inner_handler ) ;
     }
     km = (kl<n-j)?kl:n-j ;
 //           CALL VIDAMAX1( es, ee, KM+1, AB( M2DEX(1, KV+1, J)), JP )
-#define dx(B,A) ab(ib,j,(kv+1)-1+(B),A)
-#define absdx(A) (dx(A,ie)>0.)?dx(A,ie):-dx(A,ie)
-    parallel_inner( Bounds<1>(LCBLK),[&](int ie){
+#define dx(A,B) ab(A,(kv+1)+(B)-1,j,ib)
+#define absdx(I) (dx(ie,I)>0.)?dx(ie,I):-dx(ie,I)
+    parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&](int ie){
       real dmax ;
       int pivot ;
-      dmax=absdx(0) ;
-      for ( int ii = 1 ; ii < km+1 ; ii++ ) {
+      dmax=absdx(1) ;
+      for ( int ii = 2 ; ii <= km+1 ; ii++ ) {
         dmax = (absdx(ii)>dmax)?absdx(ii):dmax ;
       }
     }, inner_handler );
@@ -209,15 +211,47 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
 //           do ie = es, ee
 //             JU(M0DEX(ie)) = MAX( JU(M0DEX(ie)), MIN( J+KU+JP(M0DEX(ie))-1, N ) )
 //           enddo
-    parallel_inner( Bounds<1>(LCBLK),[&] (int ie) {
-      ipiv(ib,j,ie) = jp(ib,ie)+j-1 ;
-      int j1 = ((j+ku+jp(ib,ie)-1)<n)?(j+ku+jp(ib,ie)-1):n ;
-      ju(ib,ie)=(ju(ib,ie)>j1)?ju(ib,ie):j1 ;
+    int anyjp = 0 ;
+    parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+      ipiv(ie,j,ib) = jp(ie,ib)+j-1 ;
+      int j1 = ((j+ku+jp(ie,ib)-1)<n)?(j+ku+jp(ie,ib)-1):n ;
+      ju(ie,ib)=(ju(ie,ib)>j1)?ju(ie,ib):j1 ;
     }, inner_handler );
 
-  } // j loop
+    for ( int ie = 1 ; ie <= LCBLK ; ie++ ) {
+      if ( jp(ie,ib) != 1 ) {
+//        swap( ju(ie)-j+1, ab(ie,kv+jp(ie),j), (ldab-1)*LCBLK,
+//                          ab(ie,  kv+1   ,j), (ldab-1)*LCBLK )
+        int ix = 0 ;
+        for ( int i=1 ; i <= ju(ie,ib)-j+1 ; i++ ) {
+          real temp = ab(ie,kv+jp(ie,ib)+ix,j,ib) ;
+          ab(ie,kv+jp(ie,ib)+ix,j,ib) = ab(ie,kv+1+ix,j,ib) ;
+          ab(ie,kv+1+ix,j,ib) = temp ;
+          ix += (ldab-1)*LCBLK ;
+        }
+      }
+    }
+    if ( km > 0 ) {
+//        mydscal( km,1.0/ab(ie,kv+1,j), ab(ie,kv+2,j), 1)
+      parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+        for ( int i = 0 ; i < km ; i++ ) {
+          ab(ie,kv+2+i,j,ib) *= 1.0/ab(ie,kv+1+i,j,ib) ;
+        }
+      }, inner_handler );
+    }
 
+#if 0
+    parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+      if ( jp(ie,ib) != 1 ) {
+// DSWP  N     DX                        INCX           DY                   INCY
+// (JU(ie)-J+1,AB(M2DEX(ie,KV+JP(ie),J)),(LDAB-1)*LCBLK,AB(M2DEX(ie,KV+1,J)),(LDAB-1)*LCBLK)
+
+      }
+    }, inner_handler );
+#endif
+  } // j loop
 }
+
 
 extern "C"{
 void read_scalars_(int*, int*, int*, int*, int*) ;
@@ -261,11 +295,11 @@ void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed
   }
 #endif
 
-  ipiv          = int3d( "ipiv"  , ncblk, ndof, lcblk);
-  afac          = real4d( "afac" , ncblk, ndof, mrows, lcblk) ;
-  bblk          = real3d( "bblk" , ncblk, ndof, lcblk);
-  fixed_data.ju = real2d( "ju"   , ncblk, lcblk) ;
-  fixed_data.jp = real2d( "jp"   , ncblk, lcblk) ;
+  ipiv          = int3d( "ipiv"  , lcblk, ndof, ncblk);
+  afac          = real4d( "afac" , lcblk, mrows, ndof, ncblk) ;
+  bblk          = real3d( "bblk" , lcblk, ndof, ncblk);
+  fixed_data.ju = real2d( "ju"   , lcblk, ncblk) ;
+  fixed_data.jp = real2d( "jp"   , lcblk, ncblk) ;
 
   int iunit = 98 ;
   read_scalars_( &iunit,
