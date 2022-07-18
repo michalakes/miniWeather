@@ -137,9 +137,11 @@ int main(int argc, char **argv) {
   MPI_Finalize();
 }
 
-YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
+YAKL_INLINE void vdgbtf2( int ib, 
+                          int n,                // ndof
+                          int kl, int ku,
                           real4d const &ab,
-                          int ldab,
+                          int ldab,             // mrows
                           int3d const &ipiv,
                           int2d const &ju,
                           int2d const &jp,
@@ -218,6 +220,8 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
       ju(ie,ib)=(ju(ie,ib)>j1)?ju(ie,ib):j1 ;
     }, inner_handler );
 
+    int minj = 9999999 ;
+    int maxj = -9999999 ;
     for ( int ie = 1 ; ie <= LCBLK ; ie++ ) {
       if ( jp(ie,ib) != 1 ) {
 //        swap( ju(ie)-j+1, ab(ie,kv+jp(ie),j), (ldab-1)*LCBLK,
@@ -230,12 +234,45 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
           ix += (ldab-1)*LCBLK ;
         }
       }
+      if ( ju(ie,ib) < minj ) minj = ju(ie,ib) ;
+      if ( ju(ie,ib) > maxj ) maxj = ju(ie,ib) ;
     }
     if ( km > 0 ) {
 //        mydscal( km,1.0/ab(ie,kv+1,j), ab(ie,kv+2,j), 1)
       parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
         for ( int i = 0 ; i < km ; i++ ) {
           ab(ie,kv+2+i,j,ib) *= 1.0/ab(ie,kv+1+i,j,ib) ;
+        }
+      }, inner_handler );
+    }
+    if ( minj > j ) {
+// vdger( es, ee                                &  ! elem start/end
+//      , km, minj-j                            &  ! m, n
+//      , -one                                  &  ! alpha
+//      , AB( M2DEX(1, KV+2, J  ) ) , 1         &  ! x, incx
+//      , AB( M2DEX(1, KV  , J+1) ) , LDAB-1    &  ! y, incy
+//      , AB( M2DEX(1, KV+1, J+1) ) , LDAB-1    )  ! a, lda
+//    real4d afac;   // lcblk, mrows (ldab), ndof (n), ncblk
+      // inline of dger
+      parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+        int jy = 0 ;
+        for ( int jj = 0 ; jj < km ; jj++ ) {
+          for ( int ii = 0 ; ii < minj-j ; ii++ ) {
+            //    a 
+            ab(ie, kv+1+ii+jj*(ldab-1) ,j+1, ib) -= 
+            //              x                  y
+                   ab(ie,kv+2+ii,j,ib) * ab(ie,kv+jy,j+1,ib) ;
+          }
+          jy = jy + ldab-1 ;
+        }
+      }, inner_handler );
+      parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+        for ( int jj = minj - j + 1 ; jj <= maxj - j ; jj++ ) {
+          for ( int ii = 0 ; ii < km ; ii++ ) {
+            if ( jj <= ju(ie,ib)-j ) {
+              ab(ie,kv+1+ii-jj,j+1+jj-1,ib)-=ab(ie,kv+2+ii-1,j,ib)*ab(ie,kv-jj+1,j+1+jj-1,ib);
+            }
+          }
         }
       }, inner_handler );
     }
@@ -295,7 +332,7 @@ void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed
   }
 #endif
 
-  ipiv          = int3d( "ipiv"  , lcblk, ndof, ncblk);
+  ipiv          =  int3d( "ipiv" , lcblk, ndof, ncblk);
   afac          = real4d( "afac" , lcblk, mrows, ndof, ncblk) ;
   bblk          = real3d( "bblk" , lcblk, ndof, ncblk);
   fixed_data.ju = real2d( "ju"   , lcblk, ncblk) ;
