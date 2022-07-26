@@ -18,6 +18,7 @@ void read_scalars_(int*, int*, int*, int*, int*) ;
 void read_arrays_(int*, int*, int*, int*, int*, int*, int*, real*, real* ) ;
 void diff_(real*, real*, int* ) ;
 int avec_microclock_() ;
+int omp_get_thread_num(); int omp_get_num_threads(); int omp_get_max_threads() ;
 }
 
 // We're going to define all arrays on the host because this doesn't use parallel_for
@@ -132,6 +133,8 @@ int main(int argc, char **argv) {
 
 
     s = avec_microclock_() ;
+fprintf(stderr,"max thread %d\n",omp_get_max_threads()) ;
+fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
     yakl::fence() ;
     parallel_outer( "vdgbtf2", 
                              fixed_data.ncblk, 
@@ -142,6 +145,7 @@ int main(int argc, char **argv) {
 //  printf("ib %d\n",ib); 
 //}, inner_handler) ;
 //yakl::fence_inner(inner_handler) ;
+fprintf(stderr,"thread %d\n",omp_get_thread_num()) ;
 #if 1
       vdgbtf2( ib, 
                fixed_data.ndof,
@@ -270,7 +274,9 @@ yakl::fence_inner(inner_handler) ;
       if ( ju(ie,ib) > maxj ) maxj = ju(ie,ib) ;
     }
 #if 1
+printf("outside ib %d td %d\n",ib,omp_get_thread_num()) ;
     parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+printf("inside ib %d td %d\n",ib,omp_get_thread_num()) ;
       if ( jp(ie,ib) != 1 ) {
 //        swap( ju(ie)-j+1, ab(ie,kv+jp(ie),j), (ldab-1)*LCBLK,
 //                          ab(ie,  kv+1   ,j), (ldab-1)*LCBLK )
