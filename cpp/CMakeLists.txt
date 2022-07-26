@@ -47,6 +47,7 @@ SET(CMAKE_CXX_FLAGS "${CXXFLAGS}")
 ###
 SET(CMAKE_Fortran_FLAGS "${FFLAGS}")
 SET(CMAKE_Fortran_COMPILE_OBJECT "<CMAKE_Fortran_COMPILER> -o <OBJECT> <DEFINES> <FLAGS> -c <SOURCE>")
+SET(CMAKE_C_COMPILE_OBJECT "<CMAKE_C_COMPILER> -o <OBJECT> <DEFINES> <FLAGS> -c <SOURCE>")
 
 
 ############################################################
@@ -123,7 +124,7 @@ add_test(NAME YAKL_SIMD_TEST COMMAND ./check_output.sh ./parallelfor_test 1e-9 4
 ############################################################
 ## JM version
 ############################################################
-add_executable(jmparallelfor jm_mpi_parallelfor.cpp reader.F90)
+add_executable(jmparallelfor jm_mpi_parallelfor.cpp avec_timer.c reader.F90)
 set_target_properties(jmparallelfor PROPERTIES COMPILE_FLAGS "${EXE_DEFS}")
 
 add_executable(jmparallelfor_test jm_mpi_parallelfor.cpp reader.F90)

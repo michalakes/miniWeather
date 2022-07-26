@@ -13,6 +13,13 @@
 
 using namespace yakl::fortran ;
 
+extern "C"{
+void read_scalars_(int*, int*, int*, int*, int*) ;
+void read_arrays_(int*, int*, int*, int*, int*, int*, int*, real*, real* ) ;
+void diff_(real*, real*, int* ) ;
+int avec_microclock_() ;
+}
+
 // We're going to define all arrays on the host because this doesn't use parallel_for
 typedef yakl::Array<int   ,1,yakl::memDevice,yakl::styleFortran> int1d;
 typedef yakl::Array<int   ,2,yakl::memDevice,yakl::styleFortran> int2d;
@@ -106,6 +113,7 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
 // THE MAIN PROGRAM STARTS HERE
 ///////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv) {
+  int s, e ;
   MPI_Init(&argc,&argv);
   yakl::init();
   {
@@ -121,6 +129,8 @@ int main(int argc, char **argv) {
 
     int2d  ju = int2d("ju",fixed_data.ncblk,LCBLK) ;
     int2d  jp = int2d("jp",fixed_data.ncblk,LCBLK) ;
+
+    s = avec_microclock_() ;
 
     parallel_outer( "vdgbtf2", 
                              fixed_data.ncblk, 
@@ -144,9 +154,14 @@ int main(int argc, char **argv) {
 #endif
     }, yakl::LaunchConfig<LCBLK>() ) ;
 
+    e = avec_microclock_() ;
+
     verify( ipiv, afac, bblk, dt, fixed_data );
 
   }
+
+fprintf(stderr,"kernel time %d\n",e-s) ;
+
   yakl::finalize();
   MPI_Finalize();
 }
@@ -315,11 +330,6 @@ yakl::fence_inner(inner_handler) ;
   } // j loop
 }
 
-extern "C"{
-void read_scalars_(int*, int*, int*, int*, int*) ;
-void read_arrays_(int*, int*, int*, int*, int*, int*, int*, real*, real* ) ;
-void diff_(real*, real*, int* ) ;
-}
 
 void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data ) {
   auto &nranks           = fixed_data.nranks          ;
