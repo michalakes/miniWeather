@@ -1,7 +1,7 @@
 #define LCBLK   32
 #define CVEC    LCBLK
 #define NCBLK_G 100
-#define EPS  (1.0d-1)
+#define EPS  (1.0e-1)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -252,12 +252,9 @@ yakl::fence_inner(inner_handler) ;
       if ( ju(ie,ib) < minj ) minj = ju(ie,ib) ;
       if ( ju(ie,ib) > maxj ) maxj = ju(ie,ib) ;
     }
-yakl::fence_inner(inner_handler) ;
 #if 1
-if (j==1&&ib==1)fprintf(stderr,"--%d---\n",ib) ;
-    for ( int ie = 1 ; ie <= LCBLK ; ie++ ) {
+    parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
       if ( jp(ie,ib) != 1 ) {
-if (j==1&&ib==1)fprintf(stderr,"j %d jp(%d,ib) %d, %d <> %d\n",j,ie,jp(ie,ib),kv+jp(ie,ib),kv+1) ;
 //        swap( ju(ie)-j+1, ab(ie,kv+jp(ie),j), (ldab-1)*LCBLK,
 //                          ab(ie,  kv+1   ,j), (ldab-1)*LCBLK )
         int ix = 0 ;
@@ -268,9 +265,8 @@ if (j==1&&ib==1)fprintf(stderr,"j %d jp(%d,ib) %d, %d <> %d\n",j,ie,jp(ie,ib),kv
           ix += (ldab-1)*LCBLK ;
         }
       }
-    }
+    }, inner_handler );
 #endif
-yakl::fence_inner(inner_handler) ;
     if ( km > 0 ) {
 //        mydscal( km,1.0/ab(ie,kv+1,j), ab(ie,kv+2,j), 1)
       parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
