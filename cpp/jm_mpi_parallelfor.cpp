@@ -130,8 +130,9 @@ int main(int argc, char **argv) {
     int2d  ju = int2d("ju",fixed_data.ncblk,LCBLK) ;
     int2d  jp = int2d("jp",fixed_data.ncblk,LCBLK) ;
 
-    s = avec_microclock_() ;
 
+    s = avec_microclock_() ;
+    yakl::fence() ;
     parallel_outer( "vdgbtf2", 
                              fixed_data.ncblk, 
                              YAKL_LAMBDA ( int ib, yakl::InnerHandler inner_handler )
@@ -153,6 +154,7 @@ int main(int argc, char **argv) {
                inner_handler ) ;
 #endif
     }, yakl::LaunchConfig<LCBLK>() ) ;
+    yakl::fence() ;
 
     e = avec_microclock_() ;
 
