@@ -8,6 +8,11 @@ module load gcc-9.3.0/gcc-9.3.0
 module load cmake-3.18.2/cmake-3.18.2
 module load jm-nvhpc-byo-compiler-20.11
 module load intel/intel-2020.0.166
+module load gcc-9.3.0/gcc-9.3.0
+
+module list
+
+echo $LD_LIBRARY_PATH #| sed 's/://g'
 
 
 #export TEST_MPI_COMMAND="jsrun -n 1 -c 1 -a 1 -g 1"

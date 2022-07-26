@@ -128,9 +128,8 @@ int main(int argc, char **argv) {
     // Init allocates the state and hydrostatic arrays hy_*
     init( ipiv, afac, bblk, dt, fixed_data );
 
-    int2d  ju = int2d("ju",fixed_data.ncblk,LCBLK) ;
-    int2d  jp = int2d("jp",fixed_data.ncblk,LCBLK) ;
-
+    int2d  ju = int2d("ju",LCBLK,fixed_data.ncblk) ;
+    int2d  jp = int2d("jp",LCBLK,fixed_data.ncblk) ;
 
     s = avec_microclock_() ;
 fprintf(stderr,"max thread %d\n",omp_get_max_threads()) ;
@@ -145,7 +144,7 @@ fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
 //  printf("ib %d\n",ib); 
 //}, inner_handler) ;
 //yakl::fence_inner(inner_handler) ;
-fprintf(stderr,"thread %d\n",omp_get_thread_num()) ;
+//fprintf(stderr,"thread %d\n",omp_get_thread_num()) ;
 #if 1
       vdgbtf2( ib, 
                fixed_data.ndof,
@@ -233,18 +232,13 @@ YAKL_INLINE void vdgbtf2( int ib,
 //           CALL VIDAMAX1( es, ee, KM+1, AB( M2DEX(1, KV+1, J)), JP )
 yakl::fence_inner(inner_handler) ;
 #define dx(A,B) ab(A,(kv+1)+(B)-1,j,ib)
-#define absdx(I) ((dx(ie,I)>0.)?dx(ie,I):-dx(ie,I))
+#define absdx(I) ((dx(ie,I)>0.)?(dx(ie,I)):(-dx(ie,I)))
     parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&](int ie){
-      real dmax ;
-      int pivot ;
-      dmax=absdx(1) ;
+      real dmax = absdx(1) ;
       for ( int ii = 2 ; ii <= km+1 ; ii++ ) {
-//        dmax = (absdx(ii)>dmax)?absdx(ii):dmax ;
-        if ( absdx(ii)>dmax ) {
-          dmax = absdx(ii) ;
-        }
+        if ( absdx(ii)>dmax ) dmax = absdx(ii) ;
       }
-      pivot = (dmax < EPS)?1:0;
+      int pivot = (dmax < EPS)?1:0;
       jp(ie,ib)=1 ;
       for ( int ii = 2 ; ii <= km+1 ; ii++ ) {
         if ( absdx(ii)>dmax && pivot ) {
@@ -274,10 +268,9 @@ yakl::fence_inner(inner_handler) ;
       if ( ju(ie,ib) > maxj ) maxj = ju(ie,ib) ;
     }
 #if 1
-printf("outside ib %d td %d\n",ib,omp_get_thread_num()) ;
     parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
-printf("inside ib %d td %d\n",ib,omp_get_thread_num()) ;
       if ( jp(ie,ib) != 1 ) {
+if (j==1)printf("inside ib %d ie %d jp %d td %d\n",ib,ie,jp(ie,ib),omp_get_thread_num()) ;
 //        swap( ju(ie)-j+1, ab(ie,kv+jp(ie),j), (ldab-1)*LCBLK,
 //                          ab(ie,  kv+1   ,j), (ldab-1)*LCBLK )
         int ix = 0 ;
@@ -380,8 +373,6 @@ void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed
   ipiv          =  int3d( "ipiv" , lcblk, ndof, ncblk);
   afac          = real4d( "afac" , lcblk, mrows, ndof, ncblk) ;
   bblk          = real3d( "bblk" , lcblk, ndof, ncblk);
-  fixed_data.ju =  int2d( "ju"   , lcblk, ncblk) ;
-  fixed_data.jp =  int2d( "jp"   , lcblk, ncblk) ;
   fixed_data.precond_build =  int2d( "precond_build"   , lcblk, ncblk) ;
 
   int2dHost  precHost =  int2dHost( "precHost" , lcblk, ncblk);
