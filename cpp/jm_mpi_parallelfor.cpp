@@ -10,6 +10,7 @@
 #include "pnetcdf.h"
 #include <ctime>
 #include <chrono>
+#include <cstring>
 
 using namespace yakl::fortran ;
 
@@ -18,6 +19,7 @@ void read_scalars_(int*, int*, int*, int*, int*) ;
 void read_arrays_(int*, int*, int*, int*, int*, int*, int*, real*, real* ) ;
 void diff_(real*, real*, int* ) ;
 int avec_microclock_() ;
+void my_yakl_(int*, int* , int*, int* , int* , int* , int* , real*, real*  ) ;
 #ifndef YAKL_ARCH_CUDA
 int omp_get_thread_num(); int omp_get_num_threads(); int omp_get_max_threads() ;
 #endif
@@ -100,7 +102,7 @@ void reductions           ( realConst3d state , double &mass , double &te , Fixe
 #endif
 
 //Declaring the functions defined after "main"
-void init                 ( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data );
+void init                 ( int*, int*, real*, real*, int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data );
 void verify               ( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data );
 YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
                           real4d const &ab,
@@ -115,10 +117,14 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
 ///////////////////////////////////////////////////////////////////////////////////////
 // THE MAIN PROGRAM STARTS HERE
 ///////////////////////////////////////////////////////////////////////////////////////
-int main(int argc, char **argv) {
+//int main(int argc, char **argv) {
+void my_yakl_( int *first, int *lcblk, int *ncblk, int *ndof, int *mrows, 
+               int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_host                    ) {
   int s, e ;
-  MPI_Init(&argc,&argv);
-  yakl::init();
+  //MPI_Init(&argc,&argv);
+fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
+  if ( *first ) yakl::init();
+fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
   {
     Fixed_data fixed_data;
     int3d  ipiv;   // lcblk, ndof, ncblk
@@ -128,7 +134,9 @@ int main(int argc, char **argv) {
     real dt;                    //Model time step (seconds)
 
     // Init allocates the state and hydrostatic arrays hy_*
-    init( ipiv, afac, bblk, dt, fixed_data );
+fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
+    init( precond_build_host, ipiv_host, afac_host, bblk_host, ipiv, afac, bblk, dt, fixed_data );
+fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
 
     int2d  ju = int2d("ju",LCBLK,fixed_data.ncblk) ;
     int2d  jp = int2d("jp",LCBLK,fixed_data.ncblk) ;
@@ -139,6 +147,7 @@ fprintf(stderr,"max thread %d\n",omp_get_max_threads()) ;
 fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
 #endif
     yakl::fence() ;
+fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
     parallel_outer( "vdgbtf2", 
                              fixed_data.ncblk, 
                              YAKL_LAMBDA ( int ib, yakl::InnerHandler inner_handler )
@@ -162,6 +171,7 @@ fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
 #endif
     }, yakl::LaunchConfig<LCBLK>() ) ;
     yakl::fence() ;
+fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
 
     e = avec_microclock_() ;
 
@@ -172,7 +182,7 @@ fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
 fprintf(stderr,"kernel time %d\n",e-s) ;
 
   yakl::finalize();
-  MPI_Finalize();
+//  MPI_Finalize();
 }
 
 YAKL_INLINE void vdgbtf2( int ib, 
@@ -335,7 +345,8 @@ yakl::fence_inner(inner_handler) ;
 }
 
 
-void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data ) {
+void init( int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_host,
+           int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data ) {
   auto &nranks           = fixed_data.nranks          ;
   auto &ndof             = fixed_data.ndof            ;
   auto &mrows            = fixed_data.mrows           ;
@@ -347,13 +358,13 @@ void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed
   int  ierr;
   int  memcheck ;
 
-  ierr = MPI_Comm_size(MPI_COMM_WORLD,&nranks);
-  ierr = MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+//  ierr = MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+//  ierr = MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
 
   ndof  = 145 ;
   mrows = 70 ;
   lcblk = LCBLK ;
-  ncblk = NCBLK_G / nranks ;
+  ncblk = NCBLK_G / 1 ; //nranks ;
 
   fprintf(stderr, "ndof %d \n"  , ndof );
   fprintf(stderr, "mrows %d \n" , mrows );
@@ -395,18 +406,24 @@ void init( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed
   fprintf(stderr,"kl %d \n",fixed_data.kl) ;
   fprintf(stderr,"ku %d \n",fixed_data.ku) ;
 
+
   int *p_precond_build = precHost.data(); 
   int *p_ipiv = ipivHost.data() ;
   real *p_afac = afacHost.data() ;
   real *p_bblk = bblkHost.data() ;
 
-  read_arrays_( &iunit, &lcblk, &ncblk
-               ,&fixed_data.ndof
-               ,&fixed_data.mrows
-               ,p_precond_build
-               ,p_ipiv
-               ,p_afac
-               ,p_bblk ) ;
+  std::memcpy( p_precond_build, precond_build_host, lcblk*ncblk*sizeof(int) ) ;
+  std::memcpy( p_ipiv,          ipiv_host,          lcblk*ndof*ncblk*sizeof(int) ) ;
+  std::memcpy( p_afac,          afac_host,          lcblk*mrows*ndof*ncblk*sizeof(real) ) ;
+  std::memcpy( p_afac,          bblk_host,          lcblk*ndof*ncblk*sizeof(real) ) ;
+
+//  read_arrays_( &iunit, &lcblk, &ncblk
+//               ,&fixed_data.ndof
+//               ,&fixed_data.mrows
+//               ,p_precond_build
+//               ,p_ipiv
+//               ,p_afac
+//               ,p_bblk ) ;
                 
   precHost.deep_copy_to(fixed_data.precond_build) ;
   ipivHost.deep_copy_to(ipiv) ;

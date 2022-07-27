@@ -28,12 +28,13 @@ cmake -DCMAKE_CXX_COMPILER=mpiicpc                  \
       -DCMAKE_Fortran_COMPILER=mpiifort               \
       -DYAKL_ARCH=OPENMP \
       -DYAKL_OPENMP_FLAGS="-qopenmp" \
-      -DLDFLAGS="-L${PARALLEL_NETCDF_ROOT}/lib -lpnetcdf"  \
+      -DLDFLAGS="-g -L${PARALLEL_NETCDF_ROOT}/lib -lpnetcdf"  \
       -DNX=200                                      \
       -DNZ=100                                      \
       -DSIM_TIME=1000                               \
       -DOUT_FREQ=10                     \
-      -DCXXFLAGS="-I /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/include -DHAVE_MPI -O3 --use_fast_math -I${PARALLEL_NETCDF_ROOT}/include -I/software7/depot/hpc_sdk/Linux_x86_64/20.11/math_libs/include" \
+      -DFFLAGS="-g" \
+      -DCXXFLAGS="-g -I /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/include -DHAVE_MPI -O3 --use_fast_math -I${PARALLEL_NETCDF_ROOT}/include -I/software7/depot/hpc_sdk/Linux_x86_64/20.11/math_libs/include" \
       ..
 
 # a little helper surgery to link with Fortran compiler instead of c++ 
