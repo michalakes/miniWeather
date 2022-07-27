@@ -1,6 +1,6 @@
 #define LCBLK   32
 #define CVEC    LCBLK
-#define NCBLK_G 100
+#define NCBLK_G 120
 #define EPS  (1.0e-1)
 
 #include <stdlib.h>
@@ -18,7 +18,9 @@ void read_scalars_(int*, int*, int*, int*, int*) ;
 void read_arrays_(int*, int*, int*, int*, int*, int*, int*, real*, real* ) ;
 void diff_(real*, real*, int* ) ;
 int avec_microclock_() ;
+#ifndef YAKL_ARCH_CUDA
 int omp_get_thread_num(); int omp_get_num_threads(); int omp_get_max_threads() ;
+#endif
 }
 
 // We're going to define all arrays on the host because this doesn't use parallel_for
@@ -132,8 +134,10 @@ int main(int argc, char **argv) {
     int2d  jp = int2d("jp",LCBLK,fixed_data.ncblk) ;
 
     s = avec_microclock_() ;
+#ifndef YAKL_ARCH_CUDA
 fprintf(stderr,"max thread %d\n",omp_get_max_threads()) ;
 fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
+#endif
     yakl::fence() ;
     parallel_outer( "vdgbtf2", 
                              fixed_data.ncblk, 
@@ -270,7 +274,6 @@ yakl::fence_inner(inner_handler) ;
 #if 1
     parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
       if ( jp(ie,ib) != 1 ) {
-if (j==1)printf("inside ib %d ie %d jp %d td %d\n",ib,ie,jp(ie,ib),omp_get_thread_num()) ;
 //        swap( ju(ie)-j+1, ab(ie,kv+jp(ie),j), (ldab-1)*LCBLK,
 //                          ab(ie,  kv+1   ,j), (ldab-1)*LCBLK )
         int ix = 0 ;
