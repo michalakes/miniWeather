@@ -80,30 +80,10 @@ struct Fixed_data {
 ///////////////////////////////////////////////////////////////////////////////////////
 // Variables that are dynamics over the course of the simulation
 ///////////////////////////////////////////////////////////////////////////////////////
-#if 0
-void finalize             ( );
-YAKL_INLINE void injection            ( real x , real z , real &r , real &u , real &w , real &t , real &hr , real &ht );
-YAKL_INLINE void density_current      ( real x , real z , real &r , real &u , real &w , real &t , real &hr , real &ht );
-YAKL_INLINE void gravity_waves        ( real x , real z , real &r , real &u , real &w , real &t , real &hr , real &ht );
-YAKL_INLINE void thermal              ( real x , real z , real &r , real &u , real &w , real &t , real &hr , real &ht );
-YAKL_INLINE void collision            ( real x , real z , real &r , real &u , real &w , real &t , real &hr , real &ht );
-YAKL_INLINE void hydro_const_theta    ( real z                    , real &r , real &t );
-YAKL_INLINE void hydro_const_bvfreq   ( real z , real bv_freq0    , real &r , real &t );
-YAKL_INLINE real sample_ellipse_cosine( real x , real z , real amp , real x0 , real z0 , real xrad , real zrad );
-void output               ( realConst3d state , real etime , int &num_out , Fixed_data const &fixed_data );
-void ncwrap               ( int ierr , int line );
-void perform_timestep     ( real3d const &state , real dt , int &direction_switch , Fixed_data const &fixed_data );
-void semi_discrete_step   ( realConst3d state_init , real3d const &state_forcing , real3d const &state_out , real dt , int dir , Fixed_data const &fixed_data );
-void compute_tendencies_x ( realConst3d state , real3d const &tend , real dt , Fixed_data const &fixed_data );
-void compute_tendencies_z ( realConst3d state , real3d const &tend , real dt , Fixed_data const &fixed_data );
-void set_halo_values_x    ( real3d const &state  , Fixed_data const &fixed_data );
-void set_halo_values_z    ( real3d const &state  , Fixed_data const &fixed_data );
-void reductions           ( realConst3d state , double &mass , double &te , Fixed_data const &fixed_data );
-#endif
 
 //Declaring the functions defined after "main"
-void init                 ( int*, int*, real*, real*, int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data );
-void verify               ( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data );
+void init                 ( int*, int*, real*, real*, int3d &ipiv, real4d &afac, real3d &bblk, Fixed_data &fixed_data );
+void verify               ( int3d &ipiv, real4d &afac, real3d &bblk, Fixed_data &fixed_data );
 YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
                           real4d const &ab,
                           int ldab,
@@ -122,21 +102,22 @@ void my_yakl_( int *first, int *lcblk, int *ncblk, int *ndof, int *mrows,
                int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_host                    ) {
   int s, e ;
   //MPI_Init(&argc,&argv);
-fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
   if ( *first ) yakl::init();
-fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
   {
     Fixed_data fixed_data;
     int3d  ipiv;   // lcblk, ndof, ncblk
     real4d afac;   // lcblk, mrows, ndof, ncblk
     real3d bblk;   // lcblk, ndof, ncblk
     real2d tempv;  // lcblk, ncblk
-    real dt;                    //Model time step (seconds)
 
     // Init allocates the state and hydrostatic arrays hy_*
 fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
-    init( precond_build_host, ipiv_host, afac_host, bblk_host, ipiv, afac, bblk, dt, fixed_data );
+    init( precond_build_host, ipiv_host, afac_host, bblk_host, ipiv, afac, bblk, fixed_data );
 fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
+fprintf(stderr,"%s %d fixed_data.mrows %d\n",__FILE__,__LINE__,fixed_data.mrows) ;
+fprintf(stderr,"%s %d fixed_data.ndof %d\n",__FILE__,__LINE__,fixed_data.ndof) ;
+fprintf(stderr,"%s %d fixed_data.kl %d\n",__FILE__,__LINE__,fixed_data.kl) ;
+fprintf(stderr,"%s %d fixed_data.ku %d\n",__FILE__,__LINE__,fixed_data.ku) ;
 
     int2d  ju = int2d("ju",LCBLK,fixed_data.ncblk) ;
     int2d  jp = int2d("jp",LCBLK,fixed_data.ncblk) ;
@@ -175,7 +156,7 @@ fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
 
     e = avec_microclock_() ;
 
-    verify( ipiv, afac, bblk, dt, fixed_data );
+    verify( ipiv, afac, bblk, fixed_data );
 
   }
 
@@ -346,7 +327,7 @@ yakl::fence_inner(inner_handler) ;
 
 
 void init( int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_host,
-           int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data ) {
+           int3d &ipiv, real4d &afac, real3d &bblk, Fixed_data &fixed_data ) {
   auto &nranks           = fixed_data.nranks          ;
   auto &ndof             = fixed_data.ndof            ;
   auto &mrows            = fixed_data.mrows           ;
@@ -407,8 +388,8 @@ void init( int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_
   fprintf(stderr,"ku %d \n",fixed_data.ku) ;
 
 
-  int *p_precond_build = precHost.data(); 
-  int *p_ipiv = ipivHost.data() ;
+  int  *p_precond_build = precHost.data(); 
+  int  *p_ipiv = ipivHost.data() ;
   real *p_afac = afacHost.data() ;
   real *p_bblk = bblkHost.data() ;
 
@@ -433,7 +414,7 @@ void init( int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_
 
 }
 
-void verify( int3d &ipiv, real4d &afac, real3d &bblk, real &dt , Fixed_data &fixed_data ) {
+void verify( int3d &ipiv, real4d &afac, real3d &bblk, Fixed_data &fixed_data ) {
   auto &nranks           = fixed_data.nranks          ;
   auto &ndof             = fixed_data.ndof            ;
   auto &mrows            = fixed_data.mrows           ;
