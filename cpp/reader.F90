@@ -69,7 +69,6 @@ integer i,j,k
   enddo
 end subroutine read_arrays
 
-
 subroutine diff ( a_in , b_in, n )
 
   integer :: ifdiffs, n, dgts, ii

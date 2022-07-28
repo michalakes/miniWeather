@@ -98,9 +98,10 @@ YAKL_INLINE void vdgbtrs( int ib,
                           real4d const &ab,           // afac
                           int ladb,                   // fixed_data.mrows
                           int3d const &ipiv,          // ipiv
-                          real3d const &bblk,         // bblk
+                          real3d const &b,            // bblk
                           int ldb,                    // fixed_data.ndof
-                          real2d const &tempv ) ;     // tempv
+                          real2d const &tempv,        // tempv
+                          yakl::InnerHandler & inner_handler ) ;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -141,7 +142,6 @@ fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
 //}, inner_handler) ;
 //yakl::fence_inner(inner_handler) ;
 //fprintf(stderr,"thread %d\n",omp_get_thread_num()) ;
-#if 1
       vdgbtf( ib, 
                fixed_data.ndof,
                fixed_data.kl, fixed_data.ku, 
@@ -159,11 +159,10 @@ fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
                ipiv,                            // ipiv
                bblk,                            // bblk
                fixed_data.ndof,                 // ldb
-               tempv           ) ;              // temp storage
-#endif
+               tempv,                           // temp storage
+               inner_handler           ) ;
     }, yakl::LaunchConfig<LCBLK>() ) ;
     yakl::fence() ;
-fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
 
     e = avec_microclock_() ;
 
@@ -179,15 +178,76 @@ fprintf(stderr,"kernel time %d\n",e-s) ;
 
 YAKL_INLINE void vdgbtrs( int ib,
                           int n,                     // fixed_data.ndof
-                          int kl, int ku, int nrhs,  // fixed_data.kl, fixed_data.ku, 1
+                          int kl, int ku, int nrhs,  // fixed_data.kl,fixed_data.ku,1
                           real4d const &ab,          // afac
                           int ladb,                  // fixed_data.mrows
                           int3d const &ipiv,         // ipiv
-                          real3d const &bblk,        // bblk
+                          real3d const &b,           // bblk
                           int ldb,                   // fixed_data.ndof
-                          real2d const &tempv )      // tempv
+                          real2d const &tempv,       // tempv
+                          yakl::InnerHandler & inner_handler )
 {
+  if ( n == 0 || nrhs == 0 ) return ;
+  int kd = ku + kl + 1 ;
+  int lnoti = kl > 0 ;
+  if ( lnoti ) {
+    for ( int j = 1 ; j <= n-1 ; j++ ) {
+      int lm = (kl < n-j)?kl:n-j ;
+      for ( int ii = 0 ; ii < nrhs ; ii++ ) {
+        parallel_inner( yakl::fortran::Bounds<2>(kl,LCBLK),[&](int i, int ie){
+          int l = ipiv(ie,j,ib) ;
+          if ( l != j ) {
+            real tempb = b(ie,l+ii*ldb,ib) ;
+            b(ie,l+ii*ldb,ib) = b(ie,j+ii*ldb,ib) ;
+            b(ie,j+ii*ldb,ib) = tempb ;
+          }
+        }, inner_handler ) ;
+      }
+//    CALL vdger( es, ee                      &  ! elem start/end
+//               , lm, nrhs                   &  ! m, n
+//               , -one                       &  ! alpha
+//               , ab(M2DEX(1,kd+1,j)), 1     &  ! x, incx
+//               , b(M2DEX(1,j,1))    , ldb   &  ! y, incy
+//               , b(M2DEX(1,j+1,1))  , ldb   )  ! a, lda
+      // inline of dger
+      parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+        int jy = 0 ;
+        for ( int jj = 0 ; jj < nrhs ; jj++ ) {
+          for ( int ii = 0 ; ii < lm ; ii++ ) {
+            //    a 
+            b(ie,j+1+ii+jj*ldb, ib) -=  // minus because alpha = -1
+            //              x                  y
+               ab(ie,kd+1+ii,j,ib) * b(ie,j+jy,ib) ;
+          }
+          jy = jy + ldb ;
+        }
+      }, inner_handler );
+    }
+    for ( int i = 1 ; i <= nrhs ; i++ ) {
+// CALL vdtbsv( es,ee,'Upper', 'No transpose', 'Non-unit', n, kl+ku, &
+//              ab, ldab, b(M2DEX(1,1,i)), 1, tempv )
+#define X(I) b(ie,I,ib)
+#define A(I,J) ab(ie,I+(J-1)*ldb,1,ib)
+      int kx1 = 1 ;
+      int k = kl+ku ;
+      int kplus1 = k+1 ;
+      for (int j = n ; j >= 1 ; j-- ) {
+        int l = kplus1 - j ;
+        parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+          X(j) /= A(kplus1,j) ;
+          real temp = X(j) ;
+          int iend = (1>(j-k))?1:(j-k) ; // max(1,j-k)
+          for (int i = j-1 ; i >= iend ; i-- ) {
+            X(i) -= temp * A(l+i,j) ;
+          }
+        }, inner_handler );
+      }
+    }
+  }
+#undef X
+#undef A
 }
+
 
 YAKL_INLINE void vdgbtf( int ib, 
                          int n,                // ndof
@@ -325,7 +385,7 @@ yakl::fence_inner(inner_handler) ;
         for ( int jj = 0 ; jj < minj-j ; jj++ ) {
           for ( int ii = 0 ; ii < km ; ii++ ) {
             //    a 
-            ab(ie, kv+1  +ii +jj*(ldab-1) ,j+1, ib) -= 
+            ab(ie, kv+1  +ii +jj*(ldab-1) ,j+1, ib) -=  // minus because alpha = -1
             //              x                  y
                    ab(ie,kv+2+ii,j,ib) * ab(ie,kv+jy,j+1,ib) ;
           }
