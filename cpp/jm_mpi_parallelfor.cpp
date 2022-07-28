@@ -19,7 +19,7 @@ void read_scalars_(int*, int*, int*, int*, int*) ;
 void read_arrays_(int*, int*, int*, int*, int*, int*, int*, real*, real* ) ;
 void diff_(real*, real*, int* ) ;
 int avec_microclock_() ;
-void my_yakl_(int*, int* , int*, int* , int* , int* , int* , real*, real*  ) ;
+void vdgbsv_(int*, int* , int*, int* , int* , int* , int* , real*, real*  ) ;
 #ifndef YAKL_ARCH_CUDA
 int omp_get_thread_num(); int omp_get_num_threads(); int omp_get_max_threads() ;
 #endif
@@ -84,7 +84,7 @@ struct Fixed_data {
 //Declaring the functions defined after "main"
 void init                 ( int*, int*, real*, real*, int3d &ipiv, real4d &afac, real3d &bblk, Fixed_data &fixed_data );
 void verify               ( int3d &ipiv, real4d &afac, real3d &bblk, Fixed_data &fixed_data );
-YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
+YAKL_INLINE void vdgbtf( int ib, int n, int kl, int ku,
                           real4d const &ab,
                           int ldab,
                           int3d const &ipiv,
@@ -92,13 +92,22 @@ YAKL_INLINE void vdgbtf2( int ib, int n, int kl, int ku,
                           int2d const &jp,
                           Fixed_data const &fixed_data,
                           yakl::InnerHandler & inner_handler ) ;
+YAKL_INLINE void vdgbtrs( int ib,
+                          int n,                      // fixed_data.ndof
+                          int kl, int ku, int nrhs,   // fixed_data.kl, fixed_data.ku, 1
+                          real4d const &ab,           // afac
+                          int ladb,                   // fixed_data.mrows
+                          int3d const &ipiv,          // ipiv
+                          real3d const &bblk,         // bblk
+                          int ldb,                    // fixed_data.ndof
+                          real2d const &tempv ) ;     // tempv
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // THE MAIN PROGRAM STARTS HERE
 ///////////////////////////////////////////////////////////////////////////////////////
 //int main(int argc, char **argv) {
-void my_yakl_( int *first, int *lcblk, int *ncblk, int *ndof, int *mrows, 
+void vdgbsv_( int *first, int *lcblk, int *ncblk, int *ndof, int *mrows, 
                int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_host                    ) {
   int s, e ;
   //MPI_Init(&argc,&argv);
@@ -108,13 +117,13 @@ void my_yakl_( int *first, int *lcblk, int *ncblk, int *ndof, int *mrows,
     int3d  ipiv;   // lcblk, ndof, ncblk
     real4d afac;   // lcblk, mrows, ndof, ncblk
     real3d bblk;   // lcblk, ndof, ncblk
-    real2d tempv;  // lcblk, ncblk
 
     // Init allocates the state and hydrostatic arrays hy_*
     init( precond_build_host, ipiv_host, afac_host, bblk_host, ipiv, afac, bblk, fixed_data );
 
-    int2d  ju = int2d("ju",LCBLK,fixed_data.ncblk) ;
-    int2d  jp = int2d("jp",LCBLK,fixed_data.ncblk) ;
+    int2d  ju    = int2d("ju",LCBLK,fixed_data.ncblk) ;
+    int2d  jp    = int2d("jp",LCBLK,fixed_data.ncblk) ;
+    real2d tempv = real2d( "tempv", LCBLK, fixed_data.ncblk ) ;
 
     s = avec_microclock_() ;
 #ifndef YAKL_ARCH_CUDA
@@ -122,7 +131,7 @@ fprintf(stderr,"max thread %d\n",omp_get_max_threads()) ;
 fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
 #endif
     yakl::fence() ;
-    parallel_outer( "vdgbtf2", 
+    parallel_outer( "vdgbtf", 
                              fixed_data.ncblk, 
                              YAKL_LAMBDA ( int ib, yakl::InnerHandler inner_handler )
     {
@@ -133,7 +142,7 @@ fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
 //yakl::fence_inner(inner_handler) ;
 //fprintf(stderr,"thread %d\n",omp_get_thread_num()) ;
 #if 1
-      vdgbtf2( ib, 
+      vdgbtf( ib, 
                fixed_data.ndof,
                fixed_data.kl, fixed_data.ku, 
                afac, 
@@ -142,6 +151,15 @@ fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
                ju, jp,
                fixed_data,
                inner_handler ) ;
+      vdgbtrs( ib,
+               fixed_data.ndof,                 // n
+               fixed_data.kl, fixed_data.ku, 1, // kl, ku, nrhs
+               afac,                            // ab
+               fixed_data.mrows,                // ldab
+               ipiv,                            // ipiv
+               bblk,                            // bblk
+               fixed_data.ndof,                 // ldb
+               tempv           ) ;              // temp storage
 #endif
     }, yakl::LaunchConfig<LCBLK>() ) ;
     yakl::fence() ;
@@ -159,16 +177,28 @@ fprintf(stderr,"kernel time %d\n",e-s) ;
 //  MPI_Finalize();
 }
 
-YAKL_INLINE void vdgbtf2( int ib, 
-                          int n,                // ndof
-                          int kl, int ku,
-                          real4d const &ab,
-                          int ldab,             // mrows
-                          int3d const &ipiv,
-                          int2d const &ju,
-                          int2d const &jp,
-                          Fixed_data const &fixed_data,
-                          yakl::InnerHandler & inner_handler )
+YAKL_INLINE void vdgbtrs( int ib,
+                          int n,                     // fixed_data.ndof
+                          int kl, int ku, int nrhs,  // fixed_data.kl, fixed_data.ku, 1
+                          real4d const &ab,          // afac
+                          int ladb,                  // fixed_data.mrows
+                          int3d const &ipiv,         // ipiv
+                          real3d const &bblk,        // bblk
+                          int ldb,                   // fixed_data.ndof
+                          real2d const &tempv )      // tempv
+{
+}
+
+YAKL_INLINE void vdgbtf( int ib, 
+                         int n,                // ndof
+                         int kl, int ku,
+                         real4d const &ab,
+                         int ldab,             // mrows
+                         int3d const &ipiv,
+                         int2d const &ju,
+                         int2d const &jp,
+                         Fixed_data const &fixed_data,
+                         yakl::InnerHandler & inner_handler )
 {
   int kv = ku + kl ;
   int km ;
