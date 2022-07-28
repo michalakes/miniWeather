@@ -88,8 +88,8 @@ subroutine diff ( a_in , b_in, n )
   do ii = 1, n 
      a = a_in(ii)
      b = b_in(ii)
-write(298,*)ii,a
-write(299,*)ii,b
+!write(298,*)ii,a
+!write(299,*)ii,b
 
      ! borrowed from  Thomas Oppe's comp program
      sumE = sumE + ( a - b ) * ( a - b )

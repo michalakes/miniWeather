@@ -67,14 +67,12 @@ set_target_properties(jmparallelfor PROPERTIES COMPILE_FLAGS "${EXE_DEFS}")
 
 target_link_libraries(jmparallelfor      "${LDFLAGS}")
 
-add_test(NAME YAKL_JM_TEST COMMAND ./check_output.sh ./jmparallelfor_test 1e-9 4.5e-5 )
-
 
 include(YAKL/yakl_utils.cmake)
 yakl_process_target(jmparallelfor)
 
 if ("${YAKL_ARCH}" STREQUAL "CUDA")
-  set_target_properties(jmparallelfor_test PROPERTIES LINKER_LANGUAGE CXX)
+  set_target_properties(jmparallelfor PROPERTIES LINKER_LANGUAGE CXX)
   if (${CMAKE_VERSION} VERSION_GREATER "3.18.0")
     set_target_properties(jmparallelfor PROPERTIES CUDA_ARCHITECTURES OFF CUDA_STANDARD 14)
   endif()

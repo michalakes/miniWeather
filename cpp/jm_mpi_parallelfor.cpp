@@ -111,13 +111,7 @@ void my_yakl_( int *first, int *lcblk, int *ncblk, int *ndof, int *mrows,
     real2d tempv;  // lcblk, ncblk
 
     // Init allocates the state and hydrostatic arrays hy_*
-fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
     init( precond_build_host, ipiv_host, afac_host, bblk_host, ipiv, afac, bblk, fixed_data );
-fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
-fprintf(stderr,"%s %d fixed_data.mrows %d\n",__FILE__,__LINE__,fixed_data.mrows) ;
-fprintf(stderr,"%s %d fixed_data.ndof %d\n",__FILE__,__LINE__,fixed_data.ndof) ;
-fprintf(stderr,"%s %d fixed_data.kl %d\n",__FILE__,__LINE__,fixed_data.kl) ;
-fprintf(stderr,"%s %d fixed_data.ku %d\n",__FILE__,__LINE__,fixed_data.ku) ;
 
     int2d  ju = int2d("ju",LCBLK,fixed_data.ncblk) ;
     int2d  jp = int2d("jp",LCBLK,fixed_data.ncblk) ;
@@ -128,7 +122,6 @@ fprintf(stderr,"max thread %d\n",omp_get_max_threads()) ;
 fprintf(stderr,"num thread %d\n",omp_get_num_threads()) ;
 #endif
     yakl::fence() ;
-fprintf(stderr,"%s %d\n",__FILE__,__LINE__) ;
     parallel_outer( "vdgbtf2", 
                              fixed_data.ncblk, 
                              YAKL_LAMBDA ( int ib, yakl::InnerHandler inner_handler )
@@ -180,6 +173,7 @@ YAKL_INLINE void vdgbtf2( int ib,
   int kv = ku + kl ;
   int km ;
   if ( n == 0 ) return ; // quick return if possible
+
 // Gaussian elimination with partial pivoting
 // Set fill-in elements in columns KU+2 to KV to zero.
 //        DO 20 J = KU + 2, MIN( KV, N )
@@ -396,7 +390,7 @@ void init( int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_
   std::memcpy( p_precond_build, precond_build_host, lcblk*ncblk*sizeof(int) ) ;
   std::memcpy( p_ipiv,          ipiv_host,          lcblk*ndof*ncblk*sizeof(int) ) ;
   std::memcpy( p_afac,          afac_host,          lcblk*mrows*ndof*ncblk*sizeof(real) ) ;
-  std::memcpy( p_afac,          bblk_host,          lcblk*ndof*ncblk*sizeof(real) ) ;
+  std::memcpy( p_bblk,          bblk_host,          lcblk*ndof*ncblk*sizeof(real) ) ;
 
 //  read_arrays_( &iunit, &lcblk, &ncblk
 //               ,&fixed_data.ndof
@@ -410,7 +404,6 @@ void init( int *precond_build_host, int *ipiv_host, real *afac_host, real *bblk_
   ipivHost.deep_copy_to(ipiv) ;
   afacHost.deep_copy_to(afac) ;
   bblkHost.deep_copy_to(bblk) ;
-  
 
 }
 
