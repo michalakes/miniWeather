@@ -201,9 +201,6 @@ YAKL_INLINE void vdgbtrs( int ib,
             b(ie,l+ii*ldb,ib) = b(ie,j+ii*ldb,ib) ;
             b(ie,j+ii*ldb,ib) = tempb ;
           }
-//if (ib==1) {
-//printf("ie j+ii*ldb l+ii*ldb %d %d %e %d %e\n",ie,j+ii*ldb, b(ie,j+ii*ldb,ib), l+ii*ldb, b(ie,l+ii*ldb,ib) ) ;
-//}
         }, inner_handler ) ;
       }
 //    CALL vdger( es, ee                      &  ! elem start/end
@@ -221,9 +218,6 @@ YAKL_INLINE void vdgbtrs( int ib,
             b(ie,j+1+ii+jj*ldb, ib) -=  // minus because alpha = -1
             //              x                  y
                ab(ie,kd+1+ii,j,ib) * b(ie,j+jy,ib) ;
-//if (ib==1&&ie==1) {
-//printf("j i %d %d %e\n",jj+1,ii+1,b(ie,j+1+ii+jj*ldb,ib)) ;
-//}
           }
           jy = jy + ldb ;
         }
@@ -240,13 +234,11 @@ YAKL_INLINE void vdgbtrs( int ib,
       for (int j = n ; j >= 1 ; j-- ) {
         int l = kplus1 - j ;
         parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
-if(ib==1&&ie==1)printf("j l i X A %d %d %d %e %e %d\n ",j,l,kplus1,X(j),A(kplus1,j),ldab) ;
           X(j) /= A(kplus1,j) ;
           real temp = X(j) ;
           int iend = (1>(j-k))?1:(j-k) ; // max(1,j-k)
           for (int i = j-1 ; i >= iend ; i-- ) {
             X(i) -= temp * A(l+i,j) ;
-//if(ib==1&&ie==1)printf("j l i X A %d %d %d %e %e\n ",j,l,l+i,X(j),A(l+i,j)) ;
           }
         }, inner_handler );
       }
