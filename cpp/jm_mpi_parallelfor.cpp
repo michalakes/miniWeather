@@ -244,7 +244,6 @@ YAKL_INLINE void vdgbtrs( int ib,
       }
     }
   }
-if (ib==1) printf("%s %d\n",__FILE__,__LINE__) ;
 #undef X
 #undef A
 }
