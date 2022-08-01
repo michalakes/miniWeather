@@ -180,7 +180,7 @@ YAKL_INLINE void vdgbtrs( int ib,
                           int n,                     // fixed_data.ndof
                           int kl, int ku, int nrhs,  // fixed_data.kl,fixed_data.ku,1
                           real4d const &ab,          // afac
-                          int ladb,                  // fixed_data.mrows
+                          int ldab,                  // fixed_data.mrows
                           int3d const &ipiv,         // ipiv
                           real3d const &b,           // bblk
                           int ldb,                   // fixed_data.ndof
@@ -194,13 +194,16 @@ YAKL_INLINE void vdgbtrs( int ib,
     for ( int j = 1 ; j <= n-1 ; j++ ) {
       int lm = (kl < n-j)?kl:n-j ;
       for ( int ii = 0 ; ii < nrhs ; ii++ ) {
-        parallel_inner( yakl::fortran::Bounds<2>(kl,LCBLK),[&](int i, int ie){
+        parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&](int ie){
           int l = ipiv(ie,j,ib) ;
           if ( l != j ) {
             real tempb = b(ie,l+ii*ldb,ib) ;
             b(ie,l+ii*ldb,ib) = b(ie,j+ii*ldb,ib) ;
             b(ie,j+ii*ldb,ib) = tempb ;
           }
+//if (ib==1) {
+//printf("ie j+ii*ldb l+ii*ldb %d %d %e %d %e\n",ie,j+ii*ldb, b(ie,j+ii*ldb,ib), l+ii*ldb, b(ie,l+ii*ldb,ib) ) ;
+//}
         }, inner_handler ) ;
       }
 //    CALL vdger( es, ee                      &  ! elem start/end
@@ -218,6 +221,9 @@ YAKL_INLINE void vdgbtrs( int ib,
             b(ie,j+1+ii+jj*ldb, ib) -=  // minus because alpha = -1
             //              x                  y
                ab(ie,kd+1+ii,j,ib) * b(ie,j+jy,ib) ;
+//if (ib==1&&ie==1) {
+//printf("j i %d %d %e\n",jj+1,ii+1,b(ie,j+1+ii+jj*ldb,ib)) ;
+//}
           }
           jy = jy + ldb ;
         }
@@ -227,23 +233,26 @@ YAKL_INLINE void vdgbtrs( int ib,
 // CALL vdtbsv( es,ee,'Upper', 'No transpose', 'Non-unit', n, kl+ku, &
 //              ab, ldab, b(M2DEX(1,1,i)), 1, tempv )
 #define X(I) b(ie,I,ib)
-#define A(I,J) ab(ie,I+(J-1)*ldb,1,ib)
+#define A(I,J) ab(ie,I+(J-1)*ldab,1,ib)
       int kx1 = 1 ;
       int k = kl+ku ;
       int kplus1 = k+1 ;
       for (int j = n ; j >= 1 ; j-- ) {
         int l = kplus1 - j ;
         parallel_inner( yakl::fortran::Bounds<1>(LCBLK),[&] (int ie) {
+if(ib==1&&ie==1)printf("j l i X A %d %d %d %e %e %d\n ",j,l,kplus1,X(j),A(kplus1,j),ldab) ;
           X(j) /= A(kplus1,j) ;
           real temp = X(j) ;
           int iend = (1>(j-k))?1:(j-k) ; // max(1,j-k)
           for (int i = j-1 ; i >= iend ; i-- ) {
             X(i) -= temp * A(l+i,j) ;
+//if(ib==1&&ie==1)printf("j l i X A %d %d %d %e %e\n ",j,l,l+i,X(j),A(l+i,j)) ;
           }
         }, inner_handler );
       }
     }
   }
+if (ib==1) printf("%s %d\n",__FILE__,__LINE__) ;
 #undef X
 #undef A
 }
@@ -540,7 +549,8 @@ void verify( int3d &ipiv, real4d &afac, real3d &bblk, Fixed_data &fixed_data ) {
 
   int n = lcblk*mrows*ndof ;
 printf("compare afac n=%d \n",n) ;
-
   diff_( afacHost.data(), afacHost2.data(), &n ) ;
+printf("compare bblk n=%d \n",n) ;
+  diff_( bblkHost.data(), bblkHost2.data(), &n ) ;
 
 }
