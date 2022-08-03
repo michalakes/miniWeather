@@ -39,5 +39,5 @@ cmake -DCMAKE_CXX_COMPILER=mpiicpc                  \
 
 # a little helper surgery to link with Fortran compiler instead of c++ 
 # no idea how to get the wonderful wizard of cmake to do this
-sed --in-place -e 's/mpiicpc/mpiifort/' -e 's/$/-nofor-main -cxxlib/' CMakeFiles/jmparallelfor.dir/link.txt
+sed --in-place -e 's/mpiicpc/mpiifort/' -e 's/$/-nofor-main -cxxlib/' CMakeFiles/test_vdgbsv.dir/link.txt
 

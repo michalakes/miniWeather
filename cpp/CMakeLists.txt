@@ -62,19 +62,19 @@ include_directories(YAKL)
 ############################################################
 ## JM version
 ############################################################
-add_executable(jmparallelfor jm_mpi_parallelfor.cpp avec_timer.c reader.F90 fmain.F90 )
-set_target_properties(jmparallelfor PROPERTIES COMPILE_FLAGS "${EXE_DEFS}")
+add_executable(test_vdgbsv compact_vdgbsv.cpp avec_timer.c futils.F90 fmain.F90 )
+set_target_properties(test_vdgbsv PROPERTIES COMPILE_FLAGS "${EXE_DEFS}")
 
-target_link_libraries(jmparallelfor      "${LDFLAGS}")
+target_link_libraries(test_vdgbsv      "${LDFLAGS}")
 
 
 include(YAKL/yakl_utils.cmake)
-yakl_process_target(jmparallelfor)
+yakl_process_target(test_vdgbsv)
 
 if ("${YAKL_ARCH}" STREQUAL "CUDA")
-  set_target_properties(jmparallelfor PROPERTIES LINKER_LANGUAGE CXX)
+  set_target_properties(test_vdgbsv PROPERTIES LINKER_LANGUAGE CXX)
   if (${CMAKE_VERSION} VERSION_GREATER "3.18.0")
-    set_target_properties(jmparallelfor PROPERTIES CUDA_ARCHITECTURES OFF CUDA_STANDARD 14)
+    set_target_properties(test_vdgbsv PROPERTIES CUDA_ARCHITECTURES OFF CUDA_STANDARD 14)
   endif()
 endif()
 
