@@ -1,0 +1,218 @@
+Script started on Sat 06 Aug 2022 04:27:05 AM PDT
+]0;michalakes@hal4500:~/miniWeather[?1034h[michalakes@hal4500 miniWeather]$ tcsh
+]0;michalakes@hal4500:~/miniWeather[michalakes@hal4500 ~/miniWeather]$ git branch
+[?1h=  jm[m[m
+* [32mjm-fortran-main[m[m
+  main[m[m
+[K[?1l>]0;michalakes@hal4500:~/miniWeather[michalakes@hal4500 ~/miniWeather]$ git checkout 906665d
+Note: switching to '906665d'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at 906665d  On branch jm-fortran-main 	Removed stray debug print. 	Tested on CUDA.
+]0;michalakes@hal4500:~/miniWeather[michalakes@hal4500 ~/miniWeather]$ ls
+c/  cpp/  documentation/  fortran/  LICENSE  petascale_institute.md  README.md	typescript  typescript.txt
+]0;michalakes@hal4500:~/miniWeather[michalakes@hal4500 ~/miniWeather]$ cd cpp/build
+hal4500.nrlmry.navy.mil:/users/michalakes/miniWeather/cpp/build 1005 > ls
+asdf			  CMakeCache.txt	    cmake_install.cmake		   cmake_thatchroof_gnu_cpu.sh	  fort.298	       LCBLK32/		 test_vdgbsv*
+asdf2			  cmake_clean.sh*	    cmake_sandy_intel.sh	   cmake_thatchroof_gnu_gpu.sh	  fort.299	       log.txt		 YAKL/
+build.sh*		  cmake_crusher_amd_cpu.sh  cmake_savoy_intel.sh	   cmake_thatchroof_intel_cpu.sh  fort.98@	       Makefile
+check_output.sh*	  cmake_crusher_amd_gpu.sh  cmake_summit_gnu.sh		   cmake_thatchroof_nvhpc_cpu.sh  fort.99@	       README.JM
+cmake_andes_clang_cpu.sh  CMakeFiles/		    cmake_summit_ibm.sh		   CTestTestfile.cmake		  jmparallelfor*       seeit
+cmake_andes_gnu_cpu.sh	  cmake_hal_cpu_intel.sh    cmake_summit_pgi.sh		   foo				  jmparallelfor_cpu*   sourceme-hal.csh
+cmake_andes_intel_cpu.sh  cmake_hal_cuda_intel.sh   cmake_thatchroof_clang_cpu.sh  foon				  jmparallelfor_cuda*  sourceme-hal.sh
+hal4500.nrlmry.navy.mil:/users/michalakes/miniWeather/cpp/build 1006 > source sourceme-hal.csh
+hal4500.nrlmry.navy.mil:/users/michalakes/miniWeather/cpp/build 1007 > setenv VERBOSE 1
+hal4500.nrlmry.navy.mil:/users/michalakes/miniWeather/cpp/build 1008 > bash cmake_hal_cuda_intel.sh
+Re-run cmake no build system arguments
+-- The CXX compiler identification is Intel 19.1.0.20191121
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiicpc - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- The CUDA compiler identification is NVIDIA 11.1.105
+-- Detecting CUDA compiler ABI info
+-- Detecting CUDA compiler ABI info - done
+-- Check for working CUDA compiler: /software7/depot/hpc_sdk/Linux_x86_64/20.11/cuda/bin/nvcc - skipped
+-- Detecting CUDA compile features
+-- Detecting CUDA compile features - done
+-- Using double precision
+-- The C compiler identification is Intel 19.1.0.20191121
+-- The Fortran compiler identification is Intel 19.1.0.20191121
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiicc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting Fortran compiler ABI info
+-- Detecting Fortran compiler ABI info - done
+-- Check for working Fortran compiler: /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiifort - skipped
+-- Checking whether /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiifort supports Fortran 90
+-- Checking whether /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiifort supports Fortran 90 - yes
+-- ** Building YAKL for a CUDA backend **
+-- ** YAKL is using the following C++ flags: -DYAKL_ARCH_CUDA --expt-extended-lambda --expt-relaxed-constexpr -Wno-deprecated-gpu-targets -DTHRUST_IGNORE_CUB_VERSION_CHECK -std=c++17 -I /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/include -DHAVE_MPI -O3 --use_fast_math -arch sm_70 -ccbin g++ -I/software/depot/pnetcdf-1.11.2/include -I/software7/depot/hpc_sdk/Linux_x86_64/20.11/math_libs/include **
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /users/michalakes/miniWeather/cpp/build
+hal4500.nrlmry.navy.mil:/users/michalakes/miniWeather/cpp/build 1009 > make -j
+make: Warning: File `Makefile' has modification time 9 s in the future
+/software7/depot/cmake-3.18.2/bin/cmake -S/users/michalakes/miniWeather/cpp -B/users/michalakes/miniWeather/cpp/build --check-build-system CMakeFiles/Makefile.cmake 0
+/software7/depot/cmake-3.18.2/bin/cmake -E cmake_progress_start /users/michalakes/miniWeather/cpp/build/CMakeFiles /users/michalakes/miniWeather/cpp/build//CMakeFiles/progress.marks
+make  -f CMakeFiles/Makefile2 all
+make[1]: Entering directory `/users/michalakes/miniWeather/cpp/build'
+make[1]: Warning: File `CMakeFiles/Makefile2' has modification time 9.1 s in the future
+make  -f YAKL/CMakeFiles/yakl.dir/build.make YAKL/CMakeFiles/yakl.dir/depend
+make[2]: Entering directory `/users/michalakes/miniWeather/cpp/build'
+make[2]: Warning: File `YAKL/CMakeFiles/yakl.dir/flags.make' has modification time 9 s in the future
+cd /users/michalakes/miniWeather/cpp/build && /software7/depot/cmake-3.18.2/bin/cmake -E cmake_depends "Unix Makefiles" /users/michalakes/miniWeather/cpp /users/michalakes/miniWeather/cpp/YAKL /users/michalakes/miniWeather/cpp/build /users/michalakes/miniWeather/cpp/build/YAKL /users/michalakes/miniWeather/cpp/build/YAKL/CMakeFiles/yakl.dir/DependInfo.cmake --color=
+Dependee "/users/michalakes/miniWeather/cpp/build/YAKL/CMakeFiles/yakl.dir/DependInfo.cmake" is newer than depender "/users/michalakes/miniWeather/cpp/build/YAKL/CMakeFiles/yakl.dir/depend.internal".
+Dependee "/users/michalakes/miniWeather/cpp/build/YAKL/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/users/michalakes/miniWeather/cpp/build/YAKL/CMakeFiles/yakl.dir/depend.internal".
+[35m[1mScanning dependencies of target yakl[0m
+make[2]: warning:  Clock skew detected.  Your build may be incomplete.
+make[2]: Leaving directory `/users/michalakes/miniWeather/cpp/build'
+make  -f YAKL/CMakeFiles/yakl.dir/build.make YAKL/CMakeFiles/yakl.dir/build
+make[2]: Entering directory `/users/michalakes/miniWeather/cpp/build'
+make[2]: Warning: File `YAKL/CMakeFiles/yakl.dir/flags.make' has modification time 8.8 s in the future
+[ 22%] [32mBuilding Fortran object YAKL/CMakeFiles/yakl.dir/src/YAKL_gator_mod.F90.o[0m
+[ 22%] [32mBuilding CUDA object YAKL/CMakeFiles/yakl.dir/src/YAKL.cpp.o[0m
+cd /users/michalakes/miniWeather/cpp/build/YAKL && /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiifort -o CMakeFiles/yakl.dir/src/YAKL_gator_mod.F90.o   -c /users/michalakes/miniWeather/cpp/YAKL/src/YAKL_gator_mod.F90
+cd /users/michalakes/miniWeather/cpp/build/YAKL && /software7/depot/hpc_sdk/Linux_x86_64/20.11/cuda/bin/nvcc -forward-unknown-to-host-compiler  -I/users/michalakes/miniWeather/cpp/YAKL/src -I/users/michalakes/miniWeather/cpp/YAKL/src/extensions -std=c++14 -DYAKL_ARCH_CUDA --expt-extended-lambda --expt-relaxed-constexpr -Wno-deprecated-gpu-targets -DTHRUST_IGNORE_CUB_VERSION_CHECK -std=c++17 -I /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/include -DHAVE_MPI -O3 --use_fast_math -arch sm_70 -ccbin g++ -I/software/depot/pnetcdf-1.11.2/include -I/software7/depot/hpc_sdk/Linux_x86_64/20.11/math_libs/include -x cu -c /users/michalakes/miniWeather/cpp/YAKL/src/YAKL.cpp -o CMakeFiles/yakl.dir/src/YAKL.cpp.o
+nvcc warning : incompatible redefinition for option 'std'
+/software7/depot/cmake-3.18.2/bin/cmake -E cmake_copy_f90_mod YAKL/gator_mod.mod YAKL/CMakeFiles/yakl.dir/gator_mod.mod.stamp Intel
+/software7/depot/cmake-3.18.2/bin/cmake -E touch YAKL/CMakeFiles/yakl.dir/src/YAKL_gator_mod.F90.o.provides.build
+[ 33%] [32m[1mLinking CUDA device code CMakeFiles/yakl.dir/cmake_device_link.o[0m
+cd /users/michalakes/miniWeather/cpp/build/YAKL && /software7/depot/cmake-3.18.2/bin/cmake -E cmake_link_script CMakeFiles/yakl.dir/dlink.txt --verbose=1
+/software7/depot/hpc_sdk/Linux_x86_64/20.11/cuda/bin/nvcc -forward-unknown-to-host-compiler -Xcompiler=-fPIC -Wno-deprecated-gpu-targets -shared -dlink CMakeFiles/yakl.dir/src/YAKL.cpp.o CMakeFiles/yakl.dir/src/YAKL_gator_mod.F90.o -o CMakeFiles/yakl.dir/cmake_device_link.o   -L/software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/lib/release  -L/software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/lib  -L/software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/tbb/lib/intel64_lin/gcc4.4  -lcufft -lmpifort -lmpi -ldl -lrt -lpthread -lifport -lifcoremt -limf -lsvml -lipgo -lirc -lirc_s -lcudadevrt -lcudart_static 
+[ 44%] [32m[1mLinking CUDA static library libyakl.a[0m
+cd /users/michalakes/miniWeather/cpp/build/YAKL && /software7/depot/cmake-3.18.2/bin/cmake -P CMakeFiles/yakl.dir/cmake_clean_target.cmake
+cd /users/michalakes/miniWeather/cpp/build/YAKL && /software7/depot/cmake-3.18.2/bin/cmake -E cmake_link_script CMakeFiles/yakl.dir/link.txt --verbose=1
+/usr/bin/ar qc libyakl.a CMakeFiles/yakl.dir/src/YAKL.cpp.o CMakeFiles/yakl.dir/src/YAKL_gator_mod.F90.o
+/usr/bin/ar q libyakl.a CMakeFiles/yakl.dir/cmake_device_link.o
+/usr/bin/ranlib libyakl.a
+make[2]: warning:  Clock skew detected.  Your build may be incomplete.
+make[2]: Leaving directory `/users/michalakes/miniWeather/cpp/build'
+[ 44%] Built target yakl
+make  -f CMakeFiles/jmparallelfor.dir/build.make CMakeFiles/jmparallelfor.dir/depend
+make[2]: Entering directory `/users/michalakes/miniWeather/cpp/build'
+make[2]: Warning: File `CMakeFiles/jmparallelfor.dir/flags.make' has modification time 2.3 s in the future
+cd /users/michalakes/miniWeather/cpp/build && /software7/depot/cmake-3.18.2/bin/cmake -E cmake_depends "Unix Makefiles" /users/michalakes/miniWeather/cpp /users/michalakes/miniWeather/cpp /users/michalakes/miniWeather/cpp/build /users/michalakes/miniWeather/cpp/build /users/michalakes/miniWeather/cpp/build/CMakeFiles/jmparallelfor.dir/DependInfo.cmake --color=
+Dependee "/users/michalakes/miniWeather/cpp/build/CMakeFiles/jmparallelfor.dir/DependInfo.cmake" is newer than depender "/users/michalakes/miniWeather/cpp/build/CMakeFiles/jmparallelfor.dir/depend.internal".
+Dependee "/users/michalakes/miniWeather/cpp/build/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/users/michalakes/miniWeather/cpp/build/CMakeFiles/jmparallelfor.dir/depend.internal".
+[35m[1mScanning dependencies of target jmparallelfor[0m
+make[2]: warning:  Clock skew detected.  Your build may be incomplete.
+make[2]: Leaving directory `/users/michalakes/miniWeather/cpp/build'
+make  -f CMakeFiles/jmparallelfor.dir/build.make CMakeFiles/jmparallelfor.dir/build
+make[2]: Entering directory `/users/michalakes/miniWeather/cpp/build'
+make[2]: Warning: File `CMakeFiles/jmparallelfor.dir/flags.make' has modification time 2.2 s in the future
+[ 77%] [32mBuilding CUDA object CMakeFiles/jmparallelfor.dir/jm_mpi_parallelfor.cpp.o[0m
+/software7/depot/hpc_sdk/Linux_x86_64/20.11/cuda/bin/nvcc -forward-unknown-to-host-compiler  -I/users/michalakes/miniWeather/cpp/YAKL -I/users/michalakes/miniWeather/cpp/YAKL/src -I/users/michalakes/miniWeather/cpp/YAKL/src/extensions -D_NX=200 -D_NZ=100 -D_SIM_TIME=1000 -D_OUT_FREQ=10 -D_DATA_SPEC=DATA_SPEC_THERMAL -std=c++14 -DYAKL_ARCH_CUDA --expt-extended-lambda --expt-relaxed-constexpr -Wno-deprecated-gpu-targets -DTHRUST_IGNORE_CUB_VERSION_CHECK -std=c++17 -I /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/include -DHAVE_MPI -O3 --use_fast_math -arch sm_70 -ccbin g++ -I/software/depot/pnetcdf-1.11.2/include -I/software7/depot/hpc_sdk/Linux_x86_64/20.11/math_libs/include -x cu -c /users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp -o CMakeFiles/jmparallelfor.dir/jm_mpi_parallelfor.cpp.o
+[ 88%] [32mBuilding C object CMakeFiles/jmparallelfor.dir/avec_timer.c.o[0m
+[ 88%] [32mBuilding Fortran object CMakeFiles/jmparallelfor.dir/reader.F90.o[0m
+[ 88%] [32mBuilding Fortran object CMakeFiles/jmparallelfor.dir/fmain.F90.o[0m
+/software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiicc -o CMakeFiles/jmparallelfor.dir/avec_timer.c.o  -D_NX=200 -D_NZ=100 -D_SIM_TIME=1000 -D_OUT_FREQ=10 -D_DATA_SPEC=DATA_SPEC_THERMAL -c /users/michalakes/miniWeather/cpp/avec_timer.c
+/software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiifort -o CMakeFiles/jmparallelfor.dir/reader.F90.o  -D_NX=200 -D_NZ=100 -D_SIM_TIME=1000 -D_OUT_FREQ=10 -D_DATA_SPEC=DATA_SPEC_THERMAL -c /users/michalakes/miniWeather/cpp/reader.F90
+/software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiifort -o CMakeFiles/jmparallelfor.dir/fmain.F90.o  -D_NX=200 -D_NZ=100 -D_SIM_TIME=1000 -D_OUT_FREQ=10 -D_DATA_SPEC=DATA_SPEC_THERMAL -c /users/michalakes/miniWeather/cpp/fmain.F90
+nvcc warning : incompatible redefinition for option 'std'
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(231): warning: variable "kx1" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(415): warning: variable "nranks" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(420): warning: variable "myrank" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(421): warning: variable "mainproc" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(422): warning: variable "i_beg" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(423): warning: variable "ierr" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(501): warning: variable "nranks" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(506): warning: variable "myrank" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(507): warning: variable "mainproc" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(508): warning: variable "i_beg" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(509): warning: variable "ierr" was declared but never referenced
+
+/users/michalakes/miniWeather/cpp/jm_mpi_parallelfor.cpp(510): warning: variable "memcheck" was declared but never referenced
+
+[100%] [32m[1mLinking CXX executable jmparallelfor[0m
+/software7/depot/cmake-3.18.2/bin/cmake -E cmake_link_script CMakeFiles/jmparallelfor.dir/link.txt --verbose=1
+/software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/bin/mpiifort -L/software7/depot/hpc_sdk/Linux_x86_64/20.11/cuda/lib64 -L/software7/depot/hpc_sdk/Linux_x86_64/20.11/math_libs/lib64 CMakeFiles/jmparallelfor.dir/jm_mpi_parallelfor.cpp.o CMakeFiles/jmparallelfor.dir/avec_timer.c.o CMakeFiles/jmparallelfor.dir/reader.F90.o CMakeFiles/jmparallelfor.dir/fmain.F90.o -o jmparallelfor   -L/software7/depot/hpc_sdk/Linux_x86_64/20.11/cuda/targets/x86_64-linux/lib/stubs  -L/software7/depot/hpc_sdk/Linux_x86_64/20.11/cuda/targets/x86_64-linux/lib  -L/software/depot/pnetcdf-1.11.2/lib -lpnetcdf YAKL/libyakl.a -lcufft -lcudadevrt -lcudart_static -nofor-main -cxxlib
+make[2]: warning:  Clock skew detected.  Your build may be incomplete.
+make[2]: Leaving directory `/users/michalakes/miniWeather/cpp/build'
+[100%] Built target jmparallelfor
+make[1]: warning:  Clock skew detected.  Your build may be incomplete.
+make[1]: Leaving directory `/users/michalakes/miniWeather/cpp/build'
+/software7/depot/cmake-3.18.2/bin/cmake -E cmake_progress_start /users/michalakes/miniWeather/cpp/build/CMakeFiles 0
+make: warning:  Clock skew detected.  Your build may be incomplete.
+hal4500.nrlmry.navy.mil:/users/michalakes/miniWeather/cpp/build 1010 > nvprof ./jmparallelfor
+==395721== NVPROF is profiling process 395721, command: ./jmparallelfor
+Tesla V100-PCIE-16GB
+ndof 145 
+mrows 70 
+lcblk 32 
+ncblk 120 
+memcheck  318551040 
+ndof 145 
+mrows 70 
+kl 23 
+ku 23 
+compare afac n=324800 
+       Ndifs    RMS (1)            RMS (2)     DIGITS    RMSE     pntwise max
+    100422    0.6159594550E+04   0.6159594550E+04  15   0.2147E-11   0.5917E-15
+compare bblk n=324800 
+       Ndifs    RMS (1)            RMS (2)     DIGITS    RMSE     pntwise max
+    299670    0.4057818643E-01   0.4057818643E-01  14   0.2428E-15   0.1009E-13
+kernel time 33349
+==395721== Profiling application: ./jmparallelfor
+==395721== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   77.27%  249.22ms         2  124.61ms  1.7999ms  247.42ms  [CUDA memcpy DtoH]
+                   12.43%  40.088ms         4  10.022ms  2.8800us  39.356ms  [CUDA memcpy HtoD]
+                   10.30%  33.235ms         1  33.235ms  33.235ms  33.235ms  _ZN4yakl7fortran18cudaKernelOuterValIZ7vdgbsv_EUliNS_17InnerHandlerEmptyEE_Li1ELb1ELi32ELb0EEEvNS0_6BoundsIXT0_EXT1_EEET_NS_12LaunchConfigIXT2_EXT3_EEES2_
+      API calls:   51.35%  291.59ms         6  48.598ms  46.622us  248.56ms  cudaMemcpyAsync
+                   41.96%  238.30ms         2  119.15ms  350.60us  237.94ms  cudaMalloc
+                    5.87%  33.350ms         5  6.6700ms  2.6410us  33.234ms  cudaDeviceSynchronize
+                    0.57%  3.2604ms         2  1.6302ms  277.11us  2.9833ms  cudaFree
+                    0.16%  934.80us       404  2.3130us     108ns  110.77us  cuDeviceGetAttribute
+                    0.05%  268.07us         1  268.07us  268.07us  268.07us  cudaGetDeviceProperties
+                    0.02%  91.185us         4  22.796us  19.887us  28.488us  cuDeviceGetName
+                    0.01%  58.642us         1  58.642us  58.642us  58.642us  cudaLaunchKernel
+                    0.00%  10.485us         4  2.6210us     696ns  7.5730us  cuDeviceGetPCIBusId
+                    0.00%  3.4650us         1  3.4650us  3.4650us  3.4650us  cudaGetDevice
+                    0.00%  2.3320us         3     777ns     147ns  1.9960us  cuDeviceGetCount
+                    0.00%  1.0830us         8     135ns     104ns     316ns  cuDeviceGet
+                    0.00%     837ns         4     209ns     162ns     256ns  cuDeviceTotalMem
+                    0.00%     706ns         4     176ns     147ns     224ns  cuDeviceGetUuid
+
+==395721== NVTX result:
+==395721==   Thread "<unnamed>" (id = 200036352)
+==395721==     Domain "<unnamed>"
+==395721==       Range "vdgbtf"
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+          Range:  100.00%  70.117us         1  70.117us  70.117us  70.117us  vdgbtf
+ GPU activities:  100.00%  33.235ms         1  33.235ms  33.235ms  33.235ms  _ZN4yakl7fortran18cudaKernelOuterValIZ7vdgbsv_EUliNS_17InnerHandlerEmptyEE_Li1ELb1ELi32ELb0EEEvNS0_6BoundsIXT0_EXT1_EEET_NS_12LaunchConfigIXT2_EXT3_EEES2_
+      API calls:  100.00%  58.642us         1  58.642us  58.642us  58.642us  cudaLaunchKernel
+
+hal4500.nrlmry.navy.mil:/users/michalakes/miniWeather/cpp/build 1011 > exit
+exit
+]0;michalakes@hal4500:~/miniWeather[michalakes@hal4500 miniWeather]$ exit
+exit
+
+Script done on Sat 06 Aug 2022 04:28:53 AM PDT
