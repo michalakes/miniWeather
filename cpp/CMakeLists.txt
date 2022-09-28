@@ -67,14 +67,22 @@ set_target_properties(jmparallelfor PROPERTIES COMPILE_FLAGS "${EXE_DEFS}")
 
 target_link_libraries(jmparallelfor      "${LDFLAGS}")
 
+############################################################
+## NEPWRAP
+############################################################
+add_executable(nepwrap nepwrap.F90 )
+set_target_properties(nepwrap PROPERTIES COMPILE_FLAGS "${EXE_DEFS}")
+include_directories(/users/michalakes/neptune_atmos/objdir )
+target_link_libraries(nepwrap      "${LDFLAGS}")
+
 
 include(YAKL/yakl_utils.cmake)
-yakl_process_target(jmparallelfor)
+yakl_process_target(nepwrap)
 
 if ("${YAKL_ARCH}" STREQUAL "CUDA")
-  set_target_properties(jmparallelfor PROPERTIES LINKER_LANGUAGE CXX)
+  set_target_properties(nepwrap PROPERTIES LINKER_LANGUAGE CXX)
   if (${CMAKE_VERSION} VERSION_GREATER "3.18.0")
-    set_target_properties(jmparallelfor PROPERTIES CUDA_ARCHITECTURES OFF CUDA_STANDARD 14)
+    set_target_properties(nepwrap PROPERTIES CUDA_ARCHITECTURES OFF CUDA_STANDARD 14)
   endif()
 endif()
 

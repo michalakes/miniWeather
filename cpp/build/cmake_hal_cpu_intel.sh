@@ -23,21 +23,27 @@ export PARALLEL_NETCDF_ROOT=/software/depot/pnetcdf-1.11.2
 
 ./cmake_clean.sh
 
+export NEPLIBS="-L/users/michalakes/neptune_atmos/lib -lneptune -ldsapi -lioapi \
+-L/users/michalakes/p4est-2.8/local/lib -lp4est -lsc \
+-L/software/depot/hdf5-1.10.2-parallel-intel-2018/lib -lhdf5_fortran -lhdf5 -ldl -lz \
+-L/users/michalakes/.local/software/yaml-0.2.5/lib -lyaml \
+/users/michalakes/neptune_atmos/external/timemgr/libesmf_time.a -r8  -traceback -cxxlib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"
+
 cmake -DCMAKE_CXX_COMPILER=mpiicpc                  \
       -DCMAKE_C_COMPILER=mpiicc                      \
       -DCMAKE_Fortran_COMPILER=mpiifort               \
       -DYAKL_ARCH=OPENMP \
       -DYAKL_OPENMP_FLAGS="-qopenmp" \
-      -DLDFLAGS="-g -L${PARALLEL_NETCDF_ROOT}/lib -lpnetcdf"  \
+      -DLDFLAGS="-g -L${PARALLEL_NETCDF_ROOT}/lib -lpnetcdf $NEPLIBS "  \
       -DNX=200                                      \
       -DNZ=100                                      \
       -DSIM_TIME=1000                               \
       -DOUT_FREQ=10                     \
-      -DFFLAGS="-g" \
-      -DCXXFLAGS="-g -I /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/include -DHAVE_MPI -O3 --use_fast_math -I${PARALLEL_NETCDF_ROOT}/include -I/software7/depot/hpc_sdk/Linux_x86_64/20.11/math_libs/include" \
+      -DFFLAGS="-g -I/users/michalakes/neptune_atmos/objdir" \
+      -DCXXFLAGS="-g -I /software7/depot/intel-2020/compilers_and_libraries_2020.0.166/linux/mpi/intel64/include -DHAVE_MPI -O3 -I${PARALLEL_NETCDF_ROOT}/include -I/software7/depot/hpc_sdk/Linux_x86_64/20.11/math_libs/include" \
       ..
 
 # a little helper surgery to link with Fortran compiler instead of c++ 
 # no idea how to get the wonderful wizard of cmake to do this
-sed --in-place -e 's/mpiicpc/mpiifort/' -e 's/$/-nofor-main -cxxlib/' CMakeFiles/jmparallelfor.dir/link.txt
+sed --in-place -e 's/mpiicpc/mpiifort/' -e 's/$/-nofor-main -cxxlib/' CMakeFiles/nepwrap.dir/link.txt
 
